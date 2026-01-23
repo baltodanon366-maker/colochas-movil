@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Colochas Movil",
+    "slug": "colochas-movil",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.colochas.movil",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Necesitamos acceso a Bluetooth para imprimir tickets",
+        "NSBluetoothPeripheralUsageDescription": "Necesitamos acceso a Bluetooth para imprimir tickets"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.colochas.movil",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fdd5802b-fb4b-4476-b649-d0ffc6412167"
+      }
+    },
+    "owner": "baltodanon366-maker"
+  }
+}
