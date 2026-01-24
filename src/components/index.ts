@@ -15,6 +15,5 @@ export { PieChart } from './PieChart';
 export { SubHeaderBar } from './SubHeaderBar';
 export { Select } from './Select';
 export { ConfirmModal } from './ConfirmModal';
-export { PrinterSelector } from './PrinterSelector';
 
 
