@@ -16,7 +16,6 @@ import { Colors } from '../constants/colors';
 import { Venta } from '../types';
 import { format } from 'date-fns';
 import { printerService } from '../services/printer.service';
-import { PrinterSelector } from './PrinterSelector';
 import { formatDateString, formatTimeString } from '../utils/dateUtils';
 
 interface BoucherPreviewProps {
@@ -32,54 +31,24 @@ export const BoucherPreview: React.FC<BoucherPreviewProps> = ({
   onClose,
   onPrint,
 }) => {
-  const [showPrinterSelector, setShowPrinterSelector] = useState(false);
   const [printing, setPrinting] = useState(false);
 
   if (!venta) return null;
 
   const handlePrint = async () => {
-    // En web, usar window.print() - solo disponible en web
-    if (Platform.OS === 'web') {
-      // En web, la función print está disponible globalmente
-      try {
-        if (typeof (globalThis as any).print === 'function') {
-          (globalThis as any).print();
-          onPrint?.();
-          return;
-        }
-      } catch (e) {
-        // Si no está disponible, continuar con el flujo normal
-      }
-    }
-
-    // En móvil, verificar si hay impresora conectada
-    if (!printerService.isConnected()) {
-      // Mostrar selector de impresora
-      setShowPrinterSelector(true);
-      return;
-    }
-
-    // Imprimir directamente
     setPrinting(true);
     try {
       await printerService.printBoucher(venta, {
         nombreEmpresa: '$ LA CHELITA $',
-        // Puedes agregar más configuraciones aquí si es necesario
       });
-      
-      Alert.alert('Éxito', 'Boucher impreso correctamente');
       onPrint?.();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo imprimir el boucher');
+      Alert.alert('Error', error.message || 'No se pudo procesar la impresión');
     } finally {
       setPrinting(false);
     }
   };
 
-  const handlePrinterConnected = () => {
-    // Cuando se conecta una impresora, intentar imprimir automáticamente
-    handlePrint();
-  };
 
   return (
     <Modal
@@ -200,12 +169,6 @@ export const BoucherPreview: React.FC<BoucherPreviewProps> = ({
         )}
       </ScrollView>
 
-      {/* Modal de selección de impresora */}
-      <PrinterSelector
-        visible={showPrinterSelector}
-        onClose={() => setShowPrinterSelector(false)}
-        onConnected={handlePrinterConnected}
-      />
     </Modal>
   );
 };

@@ -37,12 +37,6 @@ allprojects {
         google()
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
-        
-        // Permitir protocolos inseguros para librerías que aún usan jcenter (HTTP)
-        maven {
-            url 'http://jcenter.bintray.com/'
-            allowInsecureProtocol = true
-        }
     }
 }
 

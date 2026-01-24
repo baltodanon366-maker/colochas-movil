@@ -1,25 +1,6 @@
 import { Venta } from '../types';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, Share } from 'react-native';
 import { formatDateString, formatTimeString } from '../utils/dateUtils';
-
-// Importación condicional para evitar errores en web
-let BluetoothEscposPrinter: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    BluetoothEscposPrinter = require('react-native-bluetooth-escpos-printer').default;
-  } catch (error) {
-    console.warn('Bluetooth printer library not available:', error);
-  }
-}
-
-/**
- * Interfaz para dispositivos Bluetooth
- */
-export interface BluetoothDevice {
-  address: string;
-  name: string;
-  id?: string;
-}
 
 /**
  * Configuración para la impresión del boucher
@@ -32,286 +13,246 @@ export interface BoucherConfig {
 }
 
 /**
- * Servicio para manejar la impresión térmica Bluetooth
+ * Opciones de impresión disponibles
+ */
+export interface PrintOptions {
+  share: boolean;    // Compartir como texto
+  copy: boolean;     // Copiar al portapapeles  
+  print: boolean;    // Imprimir (web/nativo)
+}
+
+/**
+ * Servicio para manejar la impresión usando APIs nativas
  * 
- * Implementado con react-native-bluetooth-escpos-printer
+ * Implementación simplificada sin dependencias externas de Bluetooth
  */
 class PrinterService {
-  private connectedDevice: BluetoothDevice | null = null;
-  private isBluetoothAvailable: boolean = false;
+  private isInitialized: boolean = false;
 
   /**
    * Inicializar el servicio de impresión
-   * Verifica si Bluetooth está disponible
+   * Verifica las capacidades del dispositivo
    */
   async initialize(): Promise<void> {
     try {
-      if (Platform.OS === 'web') {
-        this.isBluetoothAvailable = false;
-        return;
-      }
+      this.isInitialized = true;
+      console.log('Servicio de impresión nativo inicializado correctamente');
+    } catch (error) {
+      this.isInitialized = false;
+      console.warn('Error al inicializar servicio de impresión:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verificar si el servicio está disponible
+   */
+  isAvailable(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
+   * Generar texto del boucher para impresión
+   */
+  private generateBoucherText(venta: Venta, config?: BoucherConfig): string {
+    const empresa = config?.nombreEmpresa || '$ LA CHELITA $';
+    const fecha = formatDateString(venta.fecha || (venta.fechaHora ? venta.fechaHora.split('T')[0] : null) || new Date().toISOString().split('T')[0]);
+    const hora = formatTimeString(venta.fechaHora || venta.fecha);
+    const vendedorNombre = venta.usuario?.name || 'Vendedor';
+    const fechaVenta = formatDateString(venta.fecha);
+    const detalles = venta.detallesVenta || venta.detalles || [];
+    const total = Number(venta.total).toFixed(1);
+
+    let boucherText = '';
+    
+    // ===== ENCABEZADO =====
+    boucherText += `${empresa}\n`;
+    boucherText += `Fecha: ${fecha} - ${hora}\n`;
+    boucherText += 'REVISE SU BOLETO\n';
+    boucherText += 'NO SE ACEPTAN RECLAMOS DESPUES DEL SORTEO\n';
+    boucherText += 'SIN BOLETO NO HAY PREMIO\n';
+    boucherText += `VENDEDOR: ${vendedorNombre} - ${fechaVenta}\n`;
+    boucherText += `Boucher: ${venta.numeroBoucher}\n`;
+    boucherText += '================================\n';
+    
+    // ===== TABLA DE NÚMEROS =====
+    boucherText += 'NUMERO          CANTIDAD\n';
+    boucherText += '================================\n';
+    
+    for (const detalle of detalles) {
+      const numero = detalle.numero.toString().padStart(2, '0');
+      const cantidad = Number(detalle.monto).toFixed(1);
+      boucherText += `${numero}              ${cantidad.padStart(8)}\n`;
+    }
+    
+    // ===== TOTAL =====
+    boucherText += '================================\n';
+    boucherText += `TOTAL: ${total}\n`;
+    boucherText += '================================\n';
+    
+    // ===== PIE DE PÁGINA =====
+    if (config?.mensajePersonalizado) {
+      boucherText += `${config.mensajePersonalizado}\n`;
+    }
+    
+    if (venta.turno?.mensaje) {
+      boucherText += `${venta.turno.mensaje}\n`;
+    }
+    
+    boucherText += '\n¡Gracias por su compra!\n\n';
+
+    return boucherText;
+  }
+
+  /**
+   * Compartir boucher usando Share API nativa
+   */
+  async shareBoucher(venta: Venta, config?: BoucherConfig): Promise<void> {
+    try {
+      const boucherText = this.generateBoucherText(venta, config);
       
-      if (!BluetoothEscposPrinter) {
-        this.isBluetoothAvailable = false;
-        return;
-      }
+      await Share.share({
+        message: boucherText,
+        title: `Boucher ${venta.numeroBoucher}`,
+      });
+    } catch (error) {
+      console.error('Error compartiendo boucher:', error);
+      throw new Error('No se pudo compartir el boucher');
+    }
+  }
 
-      if (Platform.OS === 'android') {
-        this.isBluetoothAvailable = await BluetoothEscposPrinter.isBluetoothEnabled();
+  /**
+   * Copiar boucher al portapapeles
+   */
+  async copyBoucher(venta: Venta, config?: BoucherConfig): Promise<void> {
+    try {
+      const boucherText = this.generateBoucherText(venta, config);
+      
+      // En web, usar navigator.clipboard si está disponible
+      if (Platform.OS === 'web') {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(boucherText);
+          Alert.alert('Éxito', 'Boucher copiado al portapapeles');
+        } else {
+          throw new Error('Clipboard no disponible en este navegador');
+        }
       } else {
-        // iOS maneja Bluetooth automáticamente
-        this.isBluetoothAvailable = true;
+        // En móvil, usar Clipboard de React Native (requiere instalación)
+        Alert.alert('Información', 'Funcionalidad de copiar estará disponible en futuras versiones');
       }
     } catch (error) {
-      console.error('Error inicializando servicio de impresión:', error);
-      this.isBluetoothAvailable = false;
+      console.error('Error copiando boucher:', error);
+      Alert.alert('Error', 'No se pudo copiar el boucher al portapapeles');
     }
   }
 
   /**
-   * Buscar dispositivos Bluetooth disponibles
-   * 
-   * NOTA: Requiere implementación con la librería de Bluetooth elegida
-   */
-  async findDevices(): Promise<BluetoothDevice[]> {
-    try {
-      if (Platform.OS === 'web' || !BluetoothEscposPrinter) {
-        throw new Error('Bluetooth no disponible en esta plataforma');
-      }
-
-      const devices = await BluetoothEscposPrinter.list();
-      return devices.map((device: { address: string; name?: string }) => ({
-        address: device.address,
-        name: device.name || 'Dispositivo desconocido',
-        id: device.address,
-      }));
-    } catch (error) {
-      console.error('Error buscando dispositivos:', error);
-      throw new Error('No se pudieron encontrar dispositivos Bluetooth');
-    }
-  }
-
-  /**
-   * Conectar a una impresora específica
-   * 
-   * NOTA: Requiere implementación con la librería de Bluetooth elegida
-   */
-  async connect(deviceAddress: string): Promise<boolean> {
-    try {
-      if (Platform.OS === 'web' || !BluetoothEscposPrinter) {
-        throw new Error('Bluetooth no disponible en esta plataforma');
-      }
-
-      await BluetoothEscposPrinter.connect(deviceAddress);
-      const deviceInfo = await BluetoothEscposPrinter.getDevice();
-      this.connectedDevice = {
-        address: deviceAddress,
-        name: deviceInfo?.name || 'Impresora',
-        id: deviceAddress,
-      };
-      return true;
-    } catch (error) {
-      console.error('Error conectando:', error);
-      throw new Error('No se pudo conectar a la impresora');
-    }
-  }
-
-  /**
-   * Desconectar de la impresora
-   */
-  async disconnect(): Promise<void> {
-    try {
-      if (this.connectedDevice && BluetoothEscposPrinter && Platform.OS !== 'web') {
-        await BluetoothEscposPrinter.disconnect();
-      }
-      this.connectedDevice = null;
-    } catch (error) {
-      console.error('Error desconectando:', error);
-    }
-  }
-
-  /**
-   * Verificar si hay una impresora conectada
-   */
-  isConnected(): boolean {
-    return this.connectedDevice !== null;
-  }
-
-  /**
-   * Obtener información del dispositivo conectado
-   */
-  getConnectedDevice(): BluetoothDevice | null {
-    return this.connectedDevice;
-  }
-
-  /**
-   * Imprimir boucher de venta
-   * Formato basado en el boucher de ejemplo: "$ LA CHELITA $"
+   * Imprimir boucher usando APIs nativas
    */
   async printBoucher(venta: Venta, config?: BoucherConfig): Promise<void> {
-    if (!this.isConnected()) {
-      throw new Error('No hay impresora conectada. Por favor, conecta una impresora primero.');
-    }
-
-    if (Platform.OS === 'web' || !BluetoothEscposPrinter) {
-      throw new Error('La impresión Bluetooth no está disponible en esta plataforma');
-    }
-
     try {
-      const empresa = config?.nombreEmpresa || '$ LA CHELITA $';
-      const fecha = formatDateString(venta.fecha || (venta.fechaHora ? venta.fechaHora.split('T')[0] : null) || new Date().toISOString().split('T')[0]);
-      const hora = formatTimeString(venta.fechaHora || venta.fecha);
-      const vendedorNombre = venta.usuario?.name || 'Vendedor';
-      const fechaVenta = formatDateString(venta.fecha);
-      const detalles = venta.detallesVenta || venta.detalles || [];
-      const total = Number(venta.total).toFixed(1);
-
-      // ===== ENCABEZADO =====
-      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
-      
-      // Nombre de la empresa (negrita, tamaño grande)
-      await BluetoothEscposPrinter.printText(`${empresa}\n`, {
-        encoding: 'UTF8',
-        widthtimes: 2,
-        heigthtimes: 2,
-        fonttype: 1,
-      });
-      
-      // Fecha y hora
-      await BluetoothEscposPrinter.printText(`Fecha: ${fecha}-${hora}\n`, {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      // Mensajes informativos
-      await BluetoothEscposPrinter.printText('REVISE SU BOLETO\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      await BluetoothEscposPrinter.printText('NO SE ACEPTAN RECLAMO DESPUES D\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      await BluetoothEscposPrinter.printText('EL SORTEO SIN BOLETO NO HAY PREM\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      // Vendedor
-      await BluetoothEscposPrinter.printText(`VDOR ${vendedorNombre}-${fechaVenta}\n`, {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      // Número de boucher
-      await BluetoothEscposPrinter.printText(`${venta.numeroBoucher}\n`, {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      // Línea separadora
-      await BluetoothEscposPrinter.printText('================================\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      // ===== TABLA DE NÚMEROS =====
-      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.LEFT);
-      
-      // Encabezado de tabla
-      await BluetoothEscposPrinter.printColumn(
-        [20, 12],
-        [BluetoothEscposPrinter.ALIGN.LEFT, BluetoothEscposPrinter.ALIGN.RIGHT],
-        ['NUMERO', 'CANTIDAD'],
-        { encoding: 'UTF8', widthtimes: 1, heigthtimes: 1 }
-      );
-      
-      await BluetoothEscposPrinter.printText('================================\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      // Detalles de números
-      for (const detalle of detalles) {
-        const numero = detalle.numero.toString().padStart(2, '0');
-        const cantidad = Number(detalle.monto).toFixed(1);
+      if (Platform.OS === 'web') {
+        // En web, crear un documento HTML e imprimir
+        const boucherText = this.generateBoucherText(venta, config);
+        const printWindow = window.open('', '_blank');
         
-        await BluetoothEscposPrinter.printColumn(
-          [20, 12],
-          [BluetoothEscposPrinter.ALIGN.LEFT, BluetoothEscposPrinter.ALIGN.RIGHT],
-          [numero, cantidad],
-          { encoding: 'UTF8', widthtimes: 1, heigthtimes: 1 }
+        if (printWindow) {
+          printWindow.document.write(`
+            <html>
+              <head>
+                <title>Boucher ${venta.numeroBoucher}</title>
+                <style>
+                  body { 
+                    font-family: 'Courier New', monospace; 
+                    font-size: 12px; 
+                    margin: 20px;
+                    white-space: pre-line;
+                  }
+                </style>
+              </head>
+              <body>
+                ${boucherText}
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+          printWindow.print();
+          printWindow.close();
+        } else {
+          throw new Error('No se pudo abrir la ventana de impresión');
+        }
+      } else {
+        // En móvil, mostrar opciones disponibles
+        Alert.alert(
+          'Opciones de Impresión',
+          'Selecciona una opción para tu boucher:',
+          [
+            {
+              text: 'Compartir',
+              onPress: () => this.shareBoucher(venta, config),
+            },
+            {
+              text: 'Copiar',
+              onPress: () => this.copyBoucher(venta, config),
+            },
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+            },
+          ]
         );
       }
-      
-      // ===== TOTAL =====
-      await BluetoothEscposPrinter.printText('================================\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.RIGHT);
-      
-      await BluetoothEscposPrinter.printText('TOTAL\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      await BluetoothEscposPrinter.printText(`${total}\n`, {
-        encoding: 'UTF8',
-        widthtimes: 2,
-        heigthtimes: 2,
-        fonttype: 1,
-      });
-      await BluetoothEscposPrinter.printText(`(${total})\n`, {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      // ===== PIE DE PÁGINA =====
-      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
-      
-      if (config?.mensajePersonalizado) {
-        await BluetoothEscposPrinter.printText(`${config.mensajePersonalizado}\n`, {
-          encoding: 'UTF8',
-          widthtimes: 1,
-          heigthtimes: 1,
-        });
-      }
-      
-      if (venta.turno?.mensaje) {
-        await BluetoothEscposPrinter.printText(`${venta.turno.mensaje}\n`, {
-          encoding: 'UTF8',
-          widthtimes: 1,
-          heigthtimes: 1,
-        });
-      }
-      
-      // Espacios finales y corte
-      await BluetoothEscposPrinter.printText('\n\n\n', {
-        encoding: 'UTF8',
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      
-      await BluetoothEscposPrinter.cutPaper();
-
     } catch (error) {
       console.error('Error al imprimir:', error);
-      throw new Error('Error al imprimir el boucher: ' + (error as Error).message);
+      Alert.alert('Error', 'No se pudo imprimir el boucher: ' + (error as Error).message);
     }
   }
 
+  /**
+   * Método principal para imprimir (mantiene compatibilidad)
+   */
+  async print(venta: Venta, config?: BoucherConfig): Promise<void> {
+    await this.printBoucher(venta, config);
+  }
+
+  /**
+   * Mostrar información sobre la impresión disponible
+   */
+  getAvailableOptions(): PrintOptions {
+    return {
+      share: true,
+      copy: Platform.OS === 'web',
+      print: true,
+    };
+  }
+
+  /**
+   * Verificar estado de conexión (para compatibilidad)
+   */
+  isConnected(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
+   * Método de conexión (para compatibilidad - no hace nada)
+   */
+  async connect(): Promise<boolean> {
+    return this.isInitialized;
+  }
+
+  /**
+   * Método de desconexión (para compatibilidad - no hace nada)
+   */
+  async disconnect(): Promise<void> {
+    // No hay nada que desconectar
+  }
+
+  /**
+   * Buscar dispositivos (para compatibilidad - devuelve array vacío)
+   */
+  async findDevices(): Promise<any[]> {
+    return [];
+  }
 }
 
 export const printerService = new PrinterService();
