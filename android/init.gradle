@@ -1,0 +1,34 @@
+// Global Gradle init script for allowing insecure protocols
+allprojects {
+    repositories {
+        // Configure repositories to allow insecure protocols
+        all { ArtifactRepository repo ->
+            if (repo instanceof MavenArtifactRepository) {
+                def url = repo.url.toString()
+                if (url.startsWith('http://jcenter.bintray.com') ||
+                    url.startsWith('http://repo.spring.io') ||
+                    url.contains('jcenter') && url.startsWith('http://')) {
+                    repo.allowInsecureProtocol = true
+                }
+            }
+        }
+    }
+}
+
+// Configure buildscript repositories
+gradle.allprojects { project ->
+    project.buildscript {
+        repositories {
+            all { ArtifactRepository repo ->
+                if (repo instanceof MavenArtifactRepository) {
+                    def url = repo.url.toString()
+                    if (url.startsWith('http://jcenter.bintray.com') ||
+                        url.startsWith('http://repo.spring.io') ||
+                        url.contains('jcenter') && url.startsWith('http://')) {
+                        repo.allowInsecureProtocol = true
+                    }
+                }
+            }
+        }
+    }
+}

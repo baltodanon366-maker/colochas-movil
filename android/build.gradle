@@ -46,34 +46,3 @@ allprojects {
     }
 }
 
-// Configurar buildscript para todos los subproyectos (incluyendo librerías de node_modules)
-subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('buildscript')) {
-            project.buildscript.repositories {
-                google()
-                mavenCentral()
-                maven { url 'https://www.jitpack.io' }
-                // Permitir protocolos inseguros para librerías que aún usan jcenter (HTTP)
-                maven {
-                    url 'http://jcenter.bintray.com/'
-                    allowInsecureProtocol = true
-                }
-            }
-        }
-        
-        // También configurar los repositorios del proyecto si existen
-        if (project.hasProperty('repositories')) {
-            project.repositories {
-                google()
-                mavenCentral()
-                maven { url 'https://www.jitpack.io' }
-                // Permitir protocolos inseguros para librerías que aún usan jcenter (HTTP)
-                maven {
-                    url 'http://jcenter.bintray.com/'
-                    allowInsecureProtocol = true
-                }
-            }
-        }
-    }
-}
