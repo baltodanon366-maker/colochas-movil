@@ -1,18 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '../constants/colors';
-import { hexToRgba } from '../utils/colorUtils';
-
-// Importar condicionalmente para evitar errores en web
-let RNBarChart: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    const ChartKit = require('react-native-chart-kit');
-    RNBarChart = ChartKit.BarChart;
-  } catch (e) {
-    console.warn('react-native-chart-kit no disponible');
-  }
-}
 
 interface BarChartProps {
   data: {
@@ -24,127 +12,95 @@ interface BarChartProps {
   title?: string;
   yAxisLabel?: string;
   yAxisSuffix?: string;
-  height?: number;
 }
 
 export const BarChart: React.FC<BarChartProps> = ({
   data,
   title,
-  yAxisLabel = '',
-  yAxisSuffix = '',
-  height = 220,
+  yAxisLabel,
+  yAxisSuffix,
 }) => {
-  const screenWidth = Dimensions.get('window').width;
-
-  const chartConfig = {
-    backgroundColor: Colors.background.card,
-    backgroundGradientFrom: Colors.background.card,
-    backgroundGradientTo: Colors.background.card,
-    decimalPlaces: 0,
-    color: (opacity = 1) => hexToRgba(Colors.primary, opacity),
-    labelColor: (opacity = 1) => hexToRgba(Colors.text.primary, opacity),
-    style: {
-      borderRadius: 16,
-    },
-    propsForBackgroundLines: {
-      strokeDasharray: '',
-      stroke: Colors.border.light,
-      strokeWidth: 1,
-    },
-    barPercentage: 0.7,
-  };
-
-  // Fallback para web o si la librería no está disponible
-  if (Platform.OS === 'web' || !RNBarChart) {
-    return (
-      <View style={styles.container}>
-        {title && <Text style={styles.title}>{title}</Text>}
-        <View style={styles.webFallback}>
-          <Text style={styles.webFallbackText}>
-            Gráfico disponible en versión móvil
-          </Text>
-          <View style={styles.webDataContainer}>
-            {data.labels.map((label, index) => (
-              <View key={index} style={styles.webDataRow}>
-                <Text style={styles.webDataLabel}>{label}</Text>
-                <Text style={styles.webDataValue}>
-                  {data.datasets[0].data[index]}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    );
-  }
+  const maxValue = Math.max(...data.datasets[0].data);
 
   return (
     <View style={styles.container}>
       {title && <Text style={styles.title}>{title}</Text>}
-      <RNBarChart
-        data={data}
-        width={screenWidth - 64}
-        height={height}
-        yAxisLabel={yAxisLabel}
-        yAxisSuffix={yAxisSuffix}
-        chartConfig={chartConfig}
-        style={styles.chart}
-        showValuesOnTopOfBars
-        fromZero
-      />
+      
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.chartContainer}>
+          {data.labels.map((label, index) => {
+            const value = data.datasets[0].data[index];
+            const height = maxValue > 0 ? (value / maxValue) * 150 : 0;
+            
+            return (
+              <View key={index} style={styles.barContainer}>
+                <Text style={styles.valueText}>
+                  {yAxisLabel}{value}{yAxisSuffix}
+                </Text>
+                <View 
+                  style={[
+                    styles.bar, 
+                    { height: Math.max(height, 5) } // Mínimo 5px de altura
+                  ]} 
+                />
+                <Text style={styles.labelText}>{label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 8,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    margin: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: Colors.text.primary,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 16,
-  },
-  webFallback: {
-    padding: 16,
-    backgroundColor: Colors.background.secondary,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  webFallbackText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
   },
-  webDataContainer: {
-    gap: 8,
-  },
-  webDataRow: {
+  chartContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.background.primary,
-    borderRadius: 8,
+    alignItems: 'flex-end',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
   },
-  webDataLabel: {
-    fontSize: 14,
-    color: Colors.text.primary,
+  barContainer: {
+    alignItems: 'center',
+    marginHorizontal: 8,
+    minWidth: 40,
+  },
+  bar: {
+    width: 30,
+    backgroundColor: Colors.primary,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    marginVertical: 4,
+  },
+  valueText: {
+    fontSize: 10,
+    color: Colors.text.secondary,
+    marginBottom: 4,
     fontWeight: '500',
   },
-  webDataValue: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontWeight: 'bold',
+  labelText: {
+    fontSize: 10,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: 4,
+    transform: [{ rotate: '-45deg' }],
   },
 });
-

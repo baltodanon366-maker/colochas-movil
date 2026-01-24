@@ -1,18 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '../constants/colors';
-import { hexToRgba } from '../utils/colorUtils';
-
-// Importar condicionalmente para evitar errores en web
-let RNLineChart: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    const ChartKit = require('react-native-chart-kit');
-    RNLineChart = ChartKit.LineChart;
-  } catch (e) {
-    console.warn('react-native-chart-kit no disponible');
-  }
-}
 
 interface LineChartProps {
   data: {
@@ -26,93 +14,141 @@ interface LineChartProps {
   title?: string;
   yAxisLabel?: string;
   yAxisSuffix?: string;
-  height?: number;
+  formatYLabel?: (value: string) => string;
 }
 
 export const LineChart: React.FC<LineChartProps> = ({
   data,
   title,
-  yAxisLabel = '',
-  yAxisSuffix = '',
-  height = 220,
+  yAxisLabel,
+  yAxisSuffix,
+  formatYLabel,
 }) => {
-  const screenWidth = Dimensions.get('window').width;
-
-  const chartConfig = {
-    backgroundColor: Colors.background.card,
-    backgroundGradientFrom: Colors.background.card,
-    backgroundGradientTo: Colors.background.card,
-    decimalPlaces: 0,
-    color: (opacity = 1) => hexToRgba(Colors.primary, opacity),
-    labelColor: (opacity = 1) => hexToRgba(Colors.text.primary, opacity),
-    style: {
-      borderRadius: 16,
-    },
-    propsForBackgroundLines: {
-      strokeDasharray: '',
-      stroke: Colors.border.light,
-      strokeWidth: 1,
-    },
-  };
-
-  // Fallback para web o si la librería no está disponible
-  if (Platform.OS === 'web' || !RNLineChart) {
-    return (
-      <View style={styles.container}>
-        {title && <Text style={styles.title}>{title}</Text>}
-        <View style={styles.webFallback}>
-          <Text style={styles.webFallbackText}>
-            Gráfico disponible en versión móvil
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
+  const dataset = data.datasets[0];
+  const maxValue = Math.max(...dataset.data);
+  const minValue = Math.min(...dataset.data);
+  
   return (
     <View style={styles.container}>
       {title && <Text style={styles.title}>{title}</Text>}
-      <RNLineChart
-        data={data}
-        width={screenWidth - 64}
-        height={height}
-        yAxisLabel={yAxisLabel}
-        yAxisSuffix={yAxisSuffix}
-        chartConfig={chartConfig}
-        style={styles.chart}
-        bezier
-        fromZero
-      />
+      
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.chartContainer}>
+          {/* Puntos de datos */}
+          <View style={styles.dataPointsContainer}>
+            {dataset.data.map((value, index) => {
+              const normalizedHeight = maxValue > minValue 
+                ? ((value - minValue) / (maxValue - minValue)) * 120 
+                : 60;
+              const bottomPosition = 20; // Base de la gráfica
+              
+              return (
+                <View key={index} style={styles.pointContainer}>
+                  {/* Línea vertical desde el punto hasta la base */}
+                  <View 
+                    style={[
+                      styles.verticalLine,
+                      { 
+                        height: normalizedHeight,
+                        bottom: bottomPosition,
+                      }
+                    ]} 
+                  />
+                  {/* Punto de datos */}
+                  <View 
+                    style={[
+                      styles.dataPoint,
+                      { bottom: bottomPosition + normalizedHeight - 4 }
+                    ]} 
+                  />
+                  {/* Valor sobre el punto */}
+                  <Text 
+                    style={[
+                      styles.valueText,
+                      { bottom: bottomPosition + normalizedHeight + 8 }
+                    ]}
+                  >
+                    {formatYLabel ? formatYLabel(value.toString()) : `${yAxisLabel || ''}${value}${yAxisSuffix || ''}`}
+                  </Text>
+                  {/* Etiqueta del eje X */}
+                  <Text style={styles.labelText}>
+                    {data.labels[index]}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 8,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    margin: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: Colors.text.primary,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 16,
-  },
-  webFallback: {
-    padding: 16,
-    backgroundColor: Colors.background.secondary,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  webFallbackText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
+    marginBottom: 16,
     textAlign: 'center',
   },
+  chartContainer: {
+    height: 200,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+  },
+  dataPointsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: '100%',
+    position: 'relative',
+  },
+  pointContainer: {
+    alignItems: 'center',
+    marginHorizontal: 12,
+    minWidth: 40,
+    height: '100%',
+    position: 'relative',
+  },
+  verticalLine: {
+    width: 2,
+    backgroundColor: Colors.primary + '40', // 40% opacity
+    position: 'absolute',
+  },
+  dataPoint: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: 'white',
+    position: 'absolute',
+    elevation: 2,
+  },
+  valueText: {
+    fontSize: 10,
+    color: Colors.text.secondary,
+    fontWeight: '500',
+    position: 'absolute',
+    textAlign: 'center',
+  },
+  labelText: {
+    fontSize: 10,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    position: 'absolute',
+    bottom: 0,
+    transform: [{ rotate: '-45deg' }],
+  },
 });
-
