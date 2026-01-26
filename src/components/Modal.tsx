@@ -154,27 +154,25 @@ export const Modal: React.FC<ModalProps> = ({
         </TouchableWithoutFeedback>
 
         {/* Contenido animado */}
-        <TouchableWithoutFeedback>
-          <Animated.View style={[styles.content, contentAnimatedStyle]}>
-            {title && (
-              <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
-                {showCloseButton && (
-                  <TouchableOpacity 
-                    onPress={handleClose} 
-                    style={styles.closeButton}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="close" size={24} color={Colors.text.primary} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-            <View style={styles.childrenContainer}>
-              {children}
+        <Animated.View style={[styles.content, contentAnimatedStyle]} pointerEvents="box-none">
+          {title && (
+            <View style={styles.header}>
+              <Text style={styles.title}>{title}</Text>
+              {showCloseButton && (
+                <TouchableOpacity 
+                  onPress={handleClose} 
+                  style={styles.closeButton}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={24} color={Colors.text.primary} />
+                </TouchableOpacity>
+              )}
             </View>
-          </Animated.View>
-        </TouchableWithoutFeedback>
+          )}
+          <View style={styles.childrenContainer}>
+            {children}
+          </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </RNModal>
   );
@@ -230,9 +228,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.secondary,
   },
   childrenContainer: {
-    flex: 1,
-    maxHeight: '100%',
-    overflow: 'hidden',
+    flexGrow: 1,
+    minHeight: 0,
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 24,
