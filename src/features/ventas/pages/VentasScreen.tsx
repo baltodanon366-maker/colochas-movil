@@ -8,7 +8,6 @@ import { Loading } from '../../../components/Loading';
 import { EmptyState } from '../../../components/EmptyState';
 import { AppHeader } from '../../../components/AppHeader';
 import { SubHeaderBar } from '../../../components/SubHeaderBar';
-import { BoucherPreview } from '../../../components/BoucherPreview';
 import { Colors } from '../../../constants/colors';
 import {
   CategoriaSelector,

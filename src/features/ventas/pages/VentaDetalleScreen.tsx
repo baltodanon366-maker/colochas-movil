@@ -13,7 +13,6 @@ import { Button } from '../../../components/Button';
 import { Loading } from '../../../components/Loading';
 import { EmptyState } from '../../../components/EmptyState';
 import { AppHeader } from '../../../components/AppHeader';
-import { BoucherPreview } from '../../../components/BoucherPreview';
 import { Colors } from '../../../constants/colors';
 import { ventasService } from '../services/ventas.service';
 import { Venta } from '../../../types';
@@ -27,7 +26,6 @@ export const VentaDetalleScreen: React.FC = () => {
 
   const [venta, setVenta] = useState<Venta | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showBoucherPreview, setShowBoucherPreview] = useState(false);
 
   useEffect(() => {
     if (ventaId) {
@@ -204,22 +202,12 @@ export const VentaDetalleScreen: React.FC = () => {
         <View style={styles.actionsContainer}>
           <Button
             title="Ver Boucher"
-            onPress={() => setShowBoucherPreview(true)}
+            onPress={() => navigation.navigate('BoucherPreview', { venta })}
             icon={<Ionicons name="receipt" size={20} color={Colors.text.inverse} />}
             style={styles.actionButton}
           />
         </View>
       </ScrollView>
-
-      {/* Modal Vista Previa de Boucher */}
-      <BoucherPreview
-        visible={showBoucherPreview}
-        venta={venta}
-        onClose={() => setShowBoucherPreview(false)}
-        onPrint={() => {
-          // TODO: Implementar funcionalidad de impresión
-        }}
-      />
     </View>
   );
 };

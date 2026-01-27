@@ -35,7 +35,23 @@ export const LoginScreen: React.FC = () => {
       await login(email, password);
       // La navegación se manejará automáticamente por el AuthProvider
     } catch (error: any) {
-      Alert.alert('Error de inicio de sesión', error.message || 'Credenciales inválidas');
+      // Verificar si el error indica credenciales inválidas
+      const errorMessage = error.message || '';
+      const isInvalidCredentials = 
+        errorMessage.toLowerCase().includes('credenciales') ||
+        errorMessage.toLowerCase().includes('inválidas') ||
+        errorMessage.toLowerCase().includes('invalid') ||
+        errorMessage.toLowerCase().includes('unauthorized') ||
+        error.response?.status === 401;
+
+      if (isInvalidCredentials) {
+        Alert.alert(
+          'Usuario no encontrado',
+          'El usuario o la contraseña ingresados no son correctos. Por favor verifica tus credenciales e intenta nuevamente.'
+        );
+      } else {
+        Alert.alert('Error de inicio de sesión', errorMessage || 'Ocurrió un error al intentar iniciar sesión');
+      }
     } finally {
       setLoading(false);
     }

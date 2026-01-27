@@ -9,7 +9,6 @@ import { Button } from '../../../components/Button';
 import { NumericKeyboard } from '../../../components/NumericKeyboard';
 import { RestriccionesCard } from '../components/RestriccionesCard';
 import { DetallesList } from '../components/DetallesList';
-import { BoucherPreview } from '../../../components/BoucherPreview';
 import { Colors } from '../../../constants/colors';
 import { Turno, DetalleVenta, Venta } from '../../../types';
 import { formatearNombreTurno } from '../../../utils/turnoUtils';
@@ -56,8 +55,6 @@ export const NuevaVentaScreen: React.FC = () => {
   const [numerosRestringidos, setNumerosRestringidos] = useState<number[]>([]);
   const [loadingRestricciones, setLoadingRestricciones] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [ventaCreada, setVentaCreada] = useState<Venta | null>(null);
-  const [showBoucherPreview, setShowBoucherPreview] = useState(false);
   const turnoAnteriorRef = useRef<Turno | null>(null);
 
   useEffect(() => {
@@ -220,9 +217,9 @@ export const NuevaVentaScreen: React.FC = () => {
         detalles,
         observaciones: observaciones || undefined,
       });
-      setVentaCreada(venta);
-      setShowBoucherPreview(true);
       onSuccess?.();
+      // Navegar a la pantalla de preview del boucher
+      navigation.navigate('BoucherPreview', { venta });
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo crear la venta');
     } finally {
@@ -262,10 +259,12 @@ export const NuevaVentaScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={true}
       >
-        <Card style={styles.turnoCard}>
-          <Text style={styles.turnoLabel}>Turno:</Text>
-          <Text style={styles.turnoValue}>{formatearNombreTurno(turno!)}</Text>
-        </Card>
+        {turno && (
+          <Card style={styles.turnoCard}>
+            <Text style={styles.turnoLabel}>Turno:</Text>
+            <Text style={styles.turnoValue}>{formatearNombreTurno(turno)}</Text>
+          </Card>
+        )}
 
         <View style={styles.fechaInputContainer}>
           <Input
@@ -344,20 +343,6 @@ export const NuevaVentaScreen: React.FC = () => {
           style={styles.createButton}
         />
       </ScrollView>
-
-      <BoucherPreview
-        visible={showBoucherPreview}
-        venta={ventaCreada}
-        onClose={() => {
-          setShowBoucherPreview(false);
-          setVentaCreada(null);
-          navigation.goBack();
-        }}
-        onPrint={() => {
-          setShowBoucherPreview(false);
-          setVentaCreada(null);
-        }}
-      />
     </View>
   );
 };

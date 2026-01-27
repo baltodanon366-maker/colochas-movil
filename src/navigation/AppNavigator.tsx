@@ -30,6 +30,8 @@ import { CreateTurnoScreen } from '../features/cierres/pages/CreateTurnoScreen';
 import { EditTurnoScreen } from '../features/cierres/pages/EditTurnoScreen';
 import { CerrarTurnoScreen } from '../features/cierres/pages/CerrarTurnoScreen';
 import { CreateRestriccionScreen } from '../features/restricciones/pages/CreateRestriccionScreen';
+import { BoucherPreviewScreen } from '../features/ventas/pages/BoucherPreviewScreen';
+import { NumeroDetalleScreen } from '../features/historial/pages/NumeroDetalleScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -46,6 +48,8 @@ export type RootStackParamList = {
   EditTurno: { turnoId: number; onSuccess?: () => void };
   CerrarTurno: { turnoId: number; fecha: string; onSuccess?: () => void };
   CreateRestriccion: { turnoId: number; fecha: string; onSuccess?: () => void };
+  BoucherPreview: { venta: any };
+  NumeroDetalle: { numero: any };
 };
 
 export type MainTabParamList = {
@@ -204,6 +208,16 @@ export const AppNavigator: React.FC = () => {
             <Stack.Screen 
               name="CreateRestriccion" 
               component={CreateRestriccionScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="BoucherPreview" 
+              component={BoucherPreviewScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="NumeroDetalle" 
+              component={NumeroDetalleScreen}
               options={{ headerShown: false }}
             />
           </>

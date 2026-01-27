@@ -12,7 +12,6 @@ import {
   TurnoStatsCard,
   ResumenCard,
   NumeroGrid,
-  NumeroDetalleModal,
   DatePickerModal,
 } from '../components';
 import { useAnalisisNumeros } from '../hooks/useAnalisisNumeros';
@@ -25,8 +24,6 @@ export const AnalisisNumerosScreen: React.FC = () => {
   const [fechaFin, setFechaFin] = useState<string | null>(null);
   const [filtroCategoria, setFiltroCategoria] = useState<CategoriaTurno | null>(null);
   const [filtroTurnoId, setFiltroTurnoId] = useState<number | null>(null);
-  const [numeroSeleccionado, setNumeroSeleccionado] = useState<number | null>(null);
-  const [showDetalleModal, setShowDetalleModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerMode, setDatePickerMode] = useState<'inicio' | 'fin'>('inicio');
 
@@ -66,8 +63,10 @@ export const AnalisisNumerosScreen: React.FC = () => {
   };
 
   const handleNumeroPress = (numero: number) => {
-    setNumeroSeleccionado(numero);
-    setShowDetalleModal(true);
+    const numeroDetalle = numeros[numero];
+    if (numeroDetalle && numeroDetalle.vendido) {
+      navigation.navigate('NumeroDetalle', { numero: numeroDetalle });
+    }
   };
 
   if (loading && numeros.length === 0) {
@@ -86,7 +85,6 @@ export const AnalisisNumerosScreen: React.FC = () => {
 
   const numerosVendidos = numeros.filter((n) => n.vendido);
   const numerosNoVendidos = numeros.filter((n) => !n.vendido);
-  const numeroDetalle = numeroSeleccionado !== null ? numeros[numeroSeleccionado] : null;
 
   return (
     <View style={styles.container}>
@@ -138,15 +136,6 @@ export const AnalisisNumerosScreen: React.FC = () => {
           } else {
             setFechaFin(null);
           }
-        }}
-      />
-
-      <NumeroDetalleModal
-        visible={showDetalleModal}
-        numero={numeroDetalle}
-        onClose={() => {
-          setShowDetalleModal(false);
-          setNumeroSeleccionado(null);
         }}
       />
     </View>

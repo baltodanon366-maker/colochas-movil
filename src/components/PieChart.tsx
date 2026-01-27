@@ -5,7 +5,8 @@ import { Colors } from '../constants/colors';
 interface PieChartProps {
   data: Array<{
     name: string;
-    population: number;
+    population?: number;
+    value?: number;
     color: string;
     legendFontColor?: string;
     legendFontSize?: number;
@@ -19,7 +20,8 @@ export const PieChart: React.FC<PieChartProps> = ({
   title,
   height = 200,
 }) => {
-  const total = data.reduce((sum, item) => sum + item.population, 0);
+  // Usar 'value' si está disponible, sino usar 'population', sino 0
+  const total = data.reduce((sum, item) => sum + (item.value ?? item.population ?? 0), 0);
 
   return (
     <View style={[styles.container, { minHeight: height }]}>
@@ -38,7 +40,8 @@ export const PieChart: React.FC<PieChartProps> = ({
         {/* Leyenda con datos */}
         <View style={styles.legend}>
           {data.map((item, index) => {
-            const percentage = total > 0 ? ((item.population / total) * 100).toFixed(1) : '0';
+            const value = item.value ?? item.population ?? 0;
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
             
             return (
               <View key={index} style={styles.legendItem}>
@@ -51,7 +54,7 @@ export const PieChart: React.FC<PieChartProps> = ({
                 <View style={styles.legendTextContainer}>
                   <Text style={styles.legendName}>{item.name}</Text>
                   <Text style={styles.legendValue}>
-                    {item.population} ({percentage}%)
+                    {value} ({percentage}%)
                   </Text>
                 </View>
               </View>

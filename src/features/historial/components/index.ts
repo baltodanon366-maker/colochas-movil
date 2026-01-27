@@ -7,6 +7,5 @@ export { DatePickerModal } from './DatePickerModal';
 export { NumeroGrid } from './NumeroGrid';
 export { TurnoStatsCard } from './TurnoStatsCard';
 export { ResumenCard } from './ResumenCard';
-export { NumeroDetalleModal } from './NumeroDetalleModal';
 export { ReporteCierreScreen } from '../pages/ReporteCierreScreen';
 

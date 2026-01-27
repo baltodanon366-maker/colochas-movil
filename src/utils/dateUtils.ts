@@ -117,10 +117,10 @@ export function getNicaraguaDateTime(): Date {
 
 /**
  * Formatea una hora desde un string ISO o Date, extrayendo la hora directamente
- * sin problemas de zona horaria
+ * y convirtiéndola a la zona horaria de Nicaragua
  * @param fechaHora - String ISO (YYYY-MM-DDTHH:mm:ss) o Date object
  * @param includeSeconds - Si incluir segundos en el formato
- * @returns String en formato HH:mm o HH:mm:ss
+ * @returns String en formato HH:mm o HH:mm:ss en hora de Nicaragua
  */
 export function formatTimeString(fechaHora: string | Date | null | undefined, includeSeconds: boolean = false): string {
   if (!fechaHora) {
@@ -131,22 +131,49 @@ export function formatTimeString(fechaHora: string | Date | null | undefined, in
     let date: Date;
     
     if (typeof fechaHora === 'string') {
-      // Si es un string ISO, extraer la hora directamente sin conversión de zona horaria
-      // Formato esperado: "2026-01-21T10:35:36.000Z" o "2026-01-21 10:35:36"
-      const timeMatch = fechaHora.match(/(\d{2}):(\d{2})(?::(\d{2}))?/);
-      if (timeMatch) {
-        const hours = timeMatch[1];
-        const minutes = timeMatch[2];
-        const seconds = timeMatch[3] || '00';
-        
-        if (includeSeconds) {
-          return `${hours}:${minutes}:${seconds}`;
-        }
-        return `${hours}:${minutes}`;
-      }
+      // Si es un string ISO, parsearlo y convertir a zona horaria de Nicaragua
+      // Formato esperado: "2026-01-21T08:40:00.000Z" (UTC) o "2026-01-21 02:40:00" (local)
       
-      // Si no se puede extraer directamente, intentar con Date
-      date = new Date(fechaHora);
+      // Intentar parsear como ISO string
+      if (fechaHora.includes('T') || fechaHora.includes('Z')) {
+        // Es un string ISO, crear Date y convertir a Nicaragua
+        date = new Date(fechaHora);
+        
+        // Convertir a zona horaria de Nicaragua usando Intl.DateTimeFormat
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Managua',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: includeSeconds ? '2-digit' : undefined,
+          hour12: false,
+        });
+        
+        const parts = formatter.formatToParts(date);
+        const hour = parts.find(p => p.type === 'hour')?.value || '00';
+        const minute = parts.find(p => p.type === 'minute')?.value || '00';
+        const second = includeSeconds ? (parts.find(p => p.type === 'second')?.value || '00') : null;
+        
+        if (includeSeconds && second) {
+          return `${hour}:${minute}:${second}`;
+        }
+        return `${hour}:${minute}`;
+      } else {
+        // No es ISO, intentar extraer hora directamente del string
+        const timeMatch = fechaHora.match(/(\d{2}):(\d{2})(?::(\d{2}))?/);
+        if (timeMatch) {
+          const hours = timeMatch[1];
+          const minutes = timeMatch[2];
+          const seconds = timeMatch[3] || '00';
+          
+          if (includeSeconds) {
+            return `${hours}:${minutes}:${seconds}`;
+          }
+          return `${hours}:${minutes}`;
+        }
+        
+        // Si no se puede extraer, intentar con Date
+        date = new Date(fechaHora);
+      }
     } else {
       date = fechaHora;
     }
@@ -156,11 +183,24 @@ export function formatTimeString(fechaHora: string | Date | null | undefined, in
       return includeSeconds ? '00:00:00' : '00:00';
     }
     
-    // Formatear la hora
-    if (includeSeconds) {
-      return format(date, 'HH:mm:ss');
+    // Si llegamos aquí y es un Date object, convertir a Nicaragua
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Managua',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: includeSeconds ? '2-digit' : undefined,
+      hour12: false,
+    });
+    
+    const parts = formatter.formatToParts(date);
+    const hour = parts.find(p => p.type === 'hour')?.value || '00';
+    const minute = parts.find(p => p.type === 'minute')?.value || '00';
+    const second = includeSeconds ? (parts.find(p => p.type === 'second')?.value || '00') : null;
+    
+    if (includeSeconds && second) {
+      return `${hour}:${minute}:${second}`;
     }
-    return format(date, 'HH:mm');
+    return `${hour}:${minute}`;
   } catch (error) {
     console.error('Error formateando hora:', error, fechaHora);
     return includeSeconds ? '00:00:00' : '00:00';
