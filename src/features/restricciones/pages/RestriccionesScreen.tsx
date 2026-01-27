@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../../components/AppHeader';
 import { SubHeaderBar } from '../../../components/SubHeaderBar';
@@ -15,13 +16,13 @@ import {
   TurnoSelector,
   TurnoInfoCard,
   RestriccionesList,
-  RestriccionFormModal,
 } from '../components';
 import { useRestricciones } from '../hooks/useRestricciones';
 
 type RestriccionesView = 'categoria' | 'restricciones';
 
 export const RestriccionesScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const isAdmin = user?.roles?.some((role: any) => {
     if (typeof role === 'string') return role.toLowerCase() === 'admin';
@@ -32,9 +33,7 @@ export const RestriccionesScreen: React.FC = () => {
   const [view, setView] = useState<RestriccionesView>('categoria');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaTurno | null>(null);
   const [selectedTurnoId, setSelectedTurnoId] = useState<number | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [numerosSeleccionados, setNumerosSeleccionados] = useState<number[]>([]);
 
   const { turnos, restricciones, loading, reloadRestricciones } = useRestricciones(
     categoriaSeleccionada,
@@ -54,23 +53,10 @@ export const RestriccionesScreen: React.FC = () => {
     setSelectedTurnoId(turnoId);
   };
 
-  const toggleNumero = (numero: number) => {
-    if (numerosSeleccionados.includes(numero)) {
-      setNumerosSeleccionados(numerosSeleccionados.filter((n) => n !== numero));
-    } else {
-      setNumerosSeleccionados([...numerosSeleccionados, numero]);
-    }
-  };
-
   const handleBackToCategoria = () => {
     setView('categoria');
     setCategoriaSeleccionada(null);
     setSelectedTurnoId(null);
-  };
-
-  const handleCloseModal = () => {
-    setShowCreateModal(false);
-    setNumerosSeleccionados([]);
   };
 
   if (view === 'categoria') {
@@ -101,7 +87,16 @@ export const RestriccionesScreen: React.FC = () => {
         title={categoriaSeleccionada === 'diaria' ? 'La Diaria' : 'La Tica'}
         onBack={handleBackToCategoria}
         showAddButton={!!isAdmin && !!selectedTurnoId}
-        onAddPress={() => setShowCreateModal(true)}
+        onAddPress={() => {
+          if (!selectedTurnoId) return;
+          const parent = navigation.getParent();
+          const nav = parent || navigation;
+          nav.navigate('CreateRestriccion', {
+            turnoId: selectedTurnoId,
+            fecha,
+            onSuccess: reloadRestricciones,
+          });
+        }}
       />
 
       <ScrollView style={styles.content}>
@@ -132,17 +127,6 @@ export const RestriccionesScreen: React.FC = () => {
         />
       </ScrollView>
 
-      {isAdmin && selectedTurnoId && (
-        <RestriccionFormModal
-          visible={showCreateModal}
-          turnoId={selectedTurnoId}
-          fecha={fecha}
-          numerosSeleccionados={numerosSeleccionados}
-          onClose={handleCloseModal}
-          onSuccess={reloadRestricciones}
-          onToggleNumero={toggleNumero}
-        />
-      )}
     </View>
   );
 };

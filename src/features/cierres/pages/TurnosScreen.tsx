@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Loading } from '../../../components/Loading';
 import { EmptyState } from '../../../components/EmptyState';
@@ -11,8 +12,6 @@ import { Turno, CategoriaTurno } from '../../../types';
 import { format } from 'date-fns';
 import {
   CategoriaSelector,
-  TurnoFormModal,
-  CerrarTurnoModal,
   TurnoCard,
   RestriccionesList,
 } from '../components';
@@ -20,15 +19,12 @@ import { useTurnos } from '../hooks/useTurnos';
 import { turnosService } from '../../../services/turnos.service';
 
 export const TurnosScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('admin');
 
   const [filterCategoria, setFilterCategoria] = useState<CategoriaTurno | null>(null);
   const [selectedTurnoId, setSelectedTurnoId] = useState<number | null>(null);
-  const [showCerrarModal, setShowCerrarModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingTurno, setEditingTurno] = useState<Turno | null>(null);
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const { turnos, restricciones, loading, reloadData } = useTurnos(
@@ -47,8 +43,12 @@ export const TurnosScreen: React.FC = () => {
   };
 
   const handleEditTurno = (turno: Turno) => {
-    setEditingTurno(turno);
-    setShowEditModal(true);
+    const parent = navigation.getParent();
+    const nav = parent || navigation;
+    nav.navigate('EditTurno', {
+      turnoId: turno.id,
+      onSuccess: reloadData,
+    });
   };
 
   const handleDeleteTurno = async (turno: Turno) => {
@@ -116,7 +116,13 @@ export const TurnosScreen: React.FC = () => {
         <CategoriaSelector
           onSelectCategoria={handleSeleccionarCategoria}
           showAddButton={!!isAdmin}
-          onAddPress={() => setShowCreateModal(true)}
+          onAddPress={() => {
+            const parent = navigation.getParent();
+            const nav = parent || navigation;
+            nav.navigate('CreateTurno', {
+              onSuccess: reloadData,
+            });
+          }}
         />
       </View>
     );
@@ -133,7 +139,13 @@ export const TurnosScreen: React.FC = () => {
           setSelectedTurnoId(null);
         }}
         showAddButton={!!isAdmin}
-        onAddPress={() => setShowCreateModal(true)}
+        onAddPress={() => {
+          const parent = navigation.getParent();
+          const nav = parent || navigation;
+          nav.navigate('CreateTurno', {
+            onSuccess: reloadData,
+          });
+        }}
       />
 
       <ScrollView style={styles.content}>
@@ -157,7 +169,18 @@ export const TurnosScreen: React.FC = () => {
                 onDelete={isAdmin ? () => handleDeleteTurno(turno) : undefined}
                 onCerrar={
                   isAdmin && selectedTurnoId === turno.id
-                    ? () => setShowCerrarModal(true)
+                    ? () => {
+                        const parent = navigation.getParent();
+                        const nav = parent || navigation;
+                        nav.navigate('CerrarTurno', {
+                          turnoId: turno.id,
+                          fecha,
+                          onSuccess: () => {
+                            setSelectedTurnoId(null);
+                            reloadData();
+                          },
+                        });
+                      }
                     : undefined
                 }
               />
@@ -170,41 +193,6 @@ export const TurnosScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      {isAdmin && (
-        <>
-          <TurnoFormModal
-            visible={showCreateModal}
-            editingTurno={null}
-            onClose={() => setShowCreateModal(false)}
-            onSuccess={reloadData}
-          />
-
-          <TurnoFormModal
-            visible={showEditModal}
-            editingTurno={editingTurno}
-            onClose={() => {
-              setShowEditModal(false);
-              setEditingTurno(null);
-            }}
-            onSuccess={reloadData}
-          />
-
-          {selectedTurnoId && (
-            <CerrarTurnoModal
-              visible={showCerrarModal}
-              turnoId={selectedTurnoId}
-              fecha={fecha}
-              onClose={() => {
-                setShowCerrarModal(false);
-              }}
-              onSuccess={() => {
-                setSelectedTurnoId(null);
-                reloadData();
-              }}
-            />
-          )}
-        </>
-      )}
     </View>
   );
 };

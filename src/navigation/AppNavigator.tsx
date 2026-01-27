@@ -22,6 +22,15 @@ import { AnalisisNumerosScreen } from '../features/historial/pages/AnalisisNumer
 import { UserManagementScreen } from '../features/users/pages/UserManagementScreen';
 import { VentaDetalleScreen } from '../features/ventas/pages/VentaDetalleScreen';
 
+// New Form Screens
+import { NuevaVentaScreen } from '../features/ventas/pages/NuevaVentaScreen';
+import { CreateUserScreen } from '../features/users/pages/CreateUserScreen';
+import { EditUserScreen } from '../features/users/pages/EditUserScreen';
+import { CreateTurnoScreen } from '../features/cierres/pages/CreateTurnoScreen';
+import { EditTurnoScreen } from '../features/cierres/pages/EditTurnoScreen';
+import { CerrarTurnoScreen } from '../features/cierres/pages/CerrarTurnoScreen';
+import { CreateRestriccionScreen } from '../features/restricciones/pages/CreateRestriccionScreen';
+
 export type RootStackParamList = {
   Login: undefined;
   ResetPassword: undefined;
@@ -30,6 +39,13 @@ export type RootStackParamList = {
   UserManagement: undefined;
   VentaDetalle: { ventaId: number };
   AnalisisNumeros: undefined;
+  NuevaVenta: { turnoId: number; categoria?: string; onSuccess?: () => void };
+  CreateUser: { availableRoles?: any[]; onSuccess?: () => void };
+  EditUser: { userId: number; availableRoles?: any[]; onReload?: () => void };
+  CreateTurno: { onSuccess?: () => void };
+  EditTurno: { turnoId: number; onSuccess?: () => void };
+  CerrarTurno: { turnoId: number; fecha: string; onSuccess?: () => void };
+  CreateRestriccion: { turnoId: number; fecha: string; onSuccess?: () => void };
 };
 
 export type MainTabParamList = {
@@ -153,6 +169,41 @@ export const AppNavigator: React.FC = () => {
             <Stack.Screen 
               name="AnalisisNumeros" 
               component={AnalisisNumerosScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="NuevaVenta" 
+              component={NuevaVentaScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="CreateUser" 
+              component={CreateUserScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="EditUser" 
+              component={EditUserScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="CreateTurno" 
+              component={CreateTurnoScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="EditTurno" 
+              component={EditTurnoScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="CerrarTurno" 
+              component={CerrarTurnoScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="CreateRestriccion" 
+              component={CreateRestriccionScreen}
               options={{ headerShown: false }}
             />
           </>

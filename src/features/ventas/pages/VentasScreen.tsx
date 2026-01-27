@@ -14,7 +14,6 @@ import {
   CategoriaSelector,
   TurnoInfoCard,
   VentaCard,
-  VentaFormModal,
 } from '../components';
 import { useVentas } from '../hooks/useVentas';
 import { ventasService } from '../services/ventas.service';
@@ -28,9 +27,6 @@ export const VentasScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [view, setView] = useState<VentasView>('categoria');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaTurno | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [ventaCreada, setVentaCreada] = useState<Venta | null>(null);
-  const [showBoucherPreview, setShowBoucherPreview] = useState(false);
 
   const { turnoActual, ventas, loading, reloadVentas } = useVentas(categoriaSeleccionada);
 
@@ -45,16 +41,16 @@ export const VentasScreen: React.FC = () => {
     setCategoriaSeleccionada(categoria);
   };
 
-  const handleCreateVenta = async (ventaData: {
-    turnoId: number;
-    fecha: string;
-    detalles: Array<{ numero: number; monto: number }>;
-    observaciones?: string;
-  }) => {
-    const venta = await ventasService.create(ventaData);
-    setVentaCreada(venta);
-    setShowBoucherPreview(true);
-    reloadVentas();
+  const handleNavigateToNuevaVenta = () => {
+    if (!turnoActual) return;
+    
+    const parent = navigation.getParent();
+    const nav = parent || navigation;
+    nav.navigate('NuevaVenta', {
+      turnoId: turnoActual.id,
+      categoria: categoriaSeleccionada,
+      onSuccess: reloadVentas,
+    });
   };
 
   const handleVentaPress = (ventaId: number) => {
@@ -90,7 +86,7 @@ export const VentasScreen: React.FC = () => {
         title={categoriaSeleccionada === 'diaria' ? 'La Diaria' : 'La Tica'}
         onBack={handleBack}
         showAddButton={!!turnoActual && !loading}
-        onAddPress={() => setShowCreateModal(true)}
+        onAddPress={handleNavigateToNuevaVenta}
       />
 
       <ScrollView style={styles.content}>
@@ -99,7 +95,7 @@ export const VentasScreen: React.FC = () => {
         {turnoActual && !loading && (
           <Button
             title="Nueva Venta"
-            onPress={() => setShowCreateModal(true)}
+            onPress={handleNavigateToNuevaVenta}
             style={styles.nuevaVentaButton}
             icon={<Ionicons name="add-circle" size={20} color={Colors.text.inverse} />}
           />
@@ -128,26 +124,6 @@ export const VentasScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      <VentaFormModal
-        visible={showCreateModal}
-        turno={turnoActual}
-        onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreateVenta}
-      />
-
-      <BoucherPreview
-        visible={showBoucherPreview}
-        venta={ventaCreada}
-        onClose={() => {
-          setShowBoucherPreview(false);
-          setVentaCreada(null);
-          // Recargar ventas después de cerrar el boucher
-          reloadVentas();
-        }}
-        onPrint={() => {
-          // TODO: Implementar funcionalidad de impresión
-        }}
-      />
     </View>
   );
 };

@@ -11,8 +11,6 @@ import { usersService } from '../../../services/users.service';
 import {
   UserCard,
   UserFilters,
-  CreateUserModal,
-  EditUserModal,
 } from '../components';
 import { useUsers } from '../hooks/useUsers';
 
@@ -20,8 +18,6 @@ export const UserManagementScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
   const [showInactive, setShowInactive] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
@@ -92,7 +88,14 @@ export const UserManagementScreen: React.FC = () => {
         title="Gestión de Usuarios"
         onBack={() => navigation.goBack()}
         showAddButton={true}
-        onAddPress={() => setShowCreateModal(true)}
+        onAddPress={() => {
+          const parent = navigation.getParent();
+          const nav = parent || navigation;
+          nav.navigate('CreateUser', {
+            availableRoles,
+            onSuccess: reloadData,
+          });
+        }}
       />
 
       <ScrollView style={styles.content}>
@@ -115,32 +118,19 @@ export const UserManagementScreen: React.FC = () => {
               key={user.id}
               user={user}
               onEdit={() => {
-                setSelectedUser(user);
-                setShowEditModal(true);
+                const parent = navigation.getParent();
+                const nav = parent || navigation;
+                nav.navigate('EditUser', {
+                  userId: user.id,
+                  availableRoles,
+                  onReload: reloadData,
+                });
               }}
               onToggleStatus={() => handleToggleUserStatus(user)}
             />
           ))
         )}
       </ScrollView>
-
-      <CreateUserModal
-        visible={showCreateModal}
-        availableRoles={availableRoles}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={reloadData}
-      />
-
-      <EditUserModal
-        visible={showEditModal}
-        user={selectedUser}
-        availableRoles={availableRoles}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedUser(null);
-        }}
-        onReload={reloadData}
-      />
 
       <ConfirmModal
         visible={showConfirmModal}
