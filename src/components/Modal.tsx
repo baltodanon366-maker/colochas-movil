@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Modal as RNModal,
   View,
@@ -8,15 +8,8 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 
@@ -37,140 +30,86 @@ export const Modal: React.FC<ModalProps> = ({
   showCloseButton = true,
   animationType = 'fade',
 }) => {
-  // Valores animados para overlay y contenido
-  const overlayOpacity = useSharedValue(0);
-  const contentScale = useSharedValue(0.8);
-  const contentOpacity = useSharedValue(0);
-  const contentRotation = useSharedValue(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      // Animación de entrada: fade in del overlay y scale + fade del contenido
-      overlayOpacity.value = withTiming(1, {
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-      });
-      
-      contentScale.value = withSpring(1, {
-        damping: 15,
-        stiffness: 150,
-        mass: 0.8,
-      });
-      
-      contentOpacity.value = withTiming(1, {
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-      });
-      
-      contentRotation.value = withSpring(0, {
-        damping: 15,
-        stiffness: 150,
-      });
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
     } else {
-      // Animación de salida: elegante con scale down, fade out y rotación sutil
-      overlayOpacity.value = withTiming(0, {
-        duration: 250,
-        easing: Easing.in(Easing.ease),
-      });
-      
-      contentScale.value = withTiming(0.8, {
-        duration: 250,
-        easing: Easing.in(Easing.back(1.2)),
-      });
-      
-      contentOpacity.value = withTiming(0, {
-        duration: 250,
-        easing: Easing.in(Easing.ease),
-      });
-      
-      contentRotation.value = withTiming(-5, {
-        duration: 250,
-        easing: Easing.in(Easing.ease),
-      });
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
     }
-  }, [visible]);
-
-  // Estilos animados para el overlay
-  const overlayAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: overlayOpacity.value,
-    };
-  });
-
-  // Estilos animados para el contenido
-  const contentAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-      transform: [
-        { scale: contentScale.value },
-        { rotate: `${contentRotation.value}deg` },
-      ],
-    };
-  });
+  }, [visible, fadeAnim]);
 
   const handleClose = () => {
-    // Iniciar animación de salida
-    overlayOpacity.value = withTiming(0, {
-      duration: 250,
-      easing: Easing.in(Easing.ease),
-    });
-    
-    contentScale.value = withTiming(0.8, {
-      duration: 250,
-      easing: Easing.in(Easing.back(1.2)),
-    });
-    
-    contentOpacity.value = withTiming(0, {
-      duration: 250,
-      easing: Easing.in(Easing.ease),
-    });
-    
-    contentRotation.value = withTiming(-5, {
-      duration: 250,
-      easing: Easing.in(Easing.ease),
-    });
-
-    // Llamar onClose después de la animación
-    setTimeout(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
       onClose();
-    }, 250);
+    });
   };
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <RNModal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       onRequestClose={handleClose}
+      statusBarTranslucent={true}
+      hardwareAccelerated={true}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {/* Overlay animado */}
         <TouchableWithoutFeedback onPress={handleClose}>
-          <Animated.View style={[styles.overlay, overlayAnimatedStyle]} />
+          <Animated.View 
+            style={[
+              styles.overlay, 
+              { opacity: fadeAnim }
+            ]} 
+          />
         </TouchableWithoutFeedback>
 
-        {/* Contenido animado */}
-        <Animated.View style={[styles.content, contentAnimatedStyle]} pointerEvents="box-none">
-          {title && (
-            <View style={styles.header}>
-              <Text style={styles.title}>{title}</Text>
-              {showCloseButton && (
-                <TouchableOpacity 
-                  onPress={handleClose} 
-                  style={styles.closeButton}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close" size={24} color={Colors.text.primary} />
-                </TouchableOpacity>
-              )}
+        <Animated.View 
+          style={[
+            styles.contentWrapper, 
+            { opacity: fadeAnim }
+          ]}
+          pointerEvents="box-none"
+        >
+          <View style={styles.content} collapsable={false}>
+            {title && (
+              <View style={styles.header}>
+                <Text style={styles.title}>{title}</Text>
+                {showCloseButton && (
+                  <TouchableOpacity 
+                    onPress={handleClose} 
+                    style={styles.closeButton}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={24} color={Colors.text.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            <View style={styles.childrenContainer} collapsable={false}>
+              {children}
             </View>
-          )}
-          <View style={styles.childrenContainer}>
-            {children}
           </View>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -189,12 +128,16 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
+  contentWrapper: {
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+    zIndex: 1,
+  },
   content: {
     backgroundColor: Colors.background.card,
     borderRadius: 16,
-    padding: 0,
     width: '100%',
-    maxWidth: 500,
     maxHeight: '90%',
     borderWidth: 1,
     borderColor: Colors.border.light,
@@ -203,7 +146,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
-    overflow: 'hidden',
     flexDirection: 'column',
   },
   header: {
@@ -228,13 +170,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.secondary,
   },
   childrenContainer: {
-    flexGrow: 1,
-    minHeight: 0,
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 24,
-  },
-  scrollableContent: {
-    flexGrow: 1,
   },
 });
