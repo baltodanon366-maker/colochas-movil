@@ -52,7 +52,7 @@ class PrinterService {
   }
 
   /**
-   * Generar texto del boucher para impresión
+   * Generar texto del boucher para impresión (optimizado para impresoras térmicas)
    */
   private generateBoucherText(venta: Venta, config?: BoucherConfig): string {
     const empresa = config?.nombreEmpresa || '$ LA CHELITA $';
@@ -61,61 +61,93 @@ class PrinterService {
     const vendedorNombre = venta.usuario?.name || 'Vendedor';
     const fechaVenta = formatDateString(venta.fecha);
     const detalles = venta.detallesVenta || venta.detalles || [];
-    const total = Number(venta.total).toFixed(1);
+    const total = Number(venta.total).toFixed(2);
 
+    // Ancho típico de impresoras térmicas: 48-58 caracteres
+    const WIDTH = 48;
+    const SEPARATOR = '='.repeat(WIDTH);
+    
     let boucherText = '';
     
     // ===== ENCABEZADO =====
     boucherText += `${empresa}\n`;
+    boucherText += `${SEPARATOR}\n`;
     boucherText += `Fecha: ${fecha} - ${hora}\n`;
-    boucherText += 'REVISE SU BOLETO\n';
-    boucherText += 'NO SE ACEPTAN RECLAMOS DESPUES DEL SORTEO\n';
-    boucherText += 'SIN BOLETO NO HAY PREMIO\n';
-    boucherText += `VENDEDOR: ${vendedorNombre} - ${fechaVenta}\n`;
     boucherText += `Boucher: ${venta.numeroBoucher}\n`;
-    boucherText += '================================\n';
+    boucherText += `Vendedor: ${vendedorNombre}\n`;
+    boucherText += `${SEPARATOR}\n`;
+    boucherText += 'REVISE SU BOLETO\n';
+    boucherText += 'NO SE ACEPTAN RECLAMOS\n';
+    boucherText += 'DESPUES DEL SORTEO\n';
+    boucherText += 'SIN BOLETO NO HAY PREMIO\n';
+    boucherText += `${SEPARATOR}\n`;
     
     // ===== TABLA DE NÚMEROS =====
-    boucherText += 'NUMERO          CANTIDAD\n';
-    boucherText += '================================\n';
+    boucherText += 'NUMERO          MONTO\n';
+    boucherText += `${SEPARATOR}\n`;
     
     for (const detalle of detalles) {
       const numero = detalle.numero.toString().padStart(2, '0');
-      const cantidad = Number(detalle.monto).toFixed(1);
-      boucherText += `${numero}              ${cantidad.padStart(8)}\n`;
+      const monto = `C$${Number(detalle.monto).toFixed(2)}`;
+      // Formato: "00              C$100.00"
+      boucherText += `${numero.padEnd(15)}${monto.padStart(12)}\n`;
     }
     
     // ===== TOTAL =====
-    boucherText += '================================\n';
-    boucherText += `TOTAL: ${total}\n`;
-    boucherText += '================================\n';
+    boucherText += `${SEPARATOR}\n`;
+    boucherText += `TOTAL: C$${total.padStart(WIDTH - 8)}\n`;
+    boucherText += `${SEPARATOR}\n`;
     
     // ===== PIE DE PÁGINA =====
-    if (config?.mensajePersonalizado) {
-      boucherText += `${config.mensajePersonalizado}\n`;
-    }
-    
     if (venta.turno?.mensaje) {
       boucherText += `${venta.turno.mensaje}\n`;
+      boucherText += `${SEPARATOR}\n`;
     }
     
-    boucherText += '\n¡Gracias por su compra!\n\n';
+    if (config?.mensajePersonalizado) {
+      boucherText += `${config.mensajePersonalizado}\n`;
+      boucherText += `${SEPARATOR}\n`;
+    }
+    
+    boucherText += '\n¡Gracias por su compra!\n';
+    boucherText += '\n\n'; // Espacios finales para cortar papel
 
     return boucherText;
   }
 
   /**
-   * Compartir boucher usando Share API nativa
+   * Compartir boucher usando Share API nativa (mejorado para impresoras térmicas)
    */
   async shareBoucher(venta: Venta, config?: BoucherConfig): Promise<void> {
     try {
       const boucherText = this.generateBoucherText(venta, config);
       
-      await Share.share({
-        message: boucherText,
-        title: `Boucher ${venta.numeroBoucher}`,
-      });
-    } catch (error) {
+      // En Android, usar Share con opciones mejoradas
+      if (Platform.OS === 'android') {
+        const result = await Share.share({
+          message: boucherText,
+          title: `Boucher ${venta.numeroBoucher} - Listo para imprimir`,
+        }, {
+          dialogTitle: 'Imprimir Boucher',
+          subject: `Boucher ${venta.numeroBoucher}`,
+        });
+        
+        // Si el usuario canceló, no hacer nada
+        if (result.action === 'dismissedAction' || result.action === 'dismissed') {
+          return;
+        }
+      } else {
+        // iOS o Web
+        await Share.share({
+          message: boucherText,
+          title: `Boucher ${venta.numeroBoucher} - Listo para imprimir`,
+        });
+      }
+    } catch (error: any) {
+      // Si el usuario canceló el share, no mostrar error
+      if (error.message?.includes('cancel') || error.message?.includes('dismiss')) {
+        return;
+      }
       console.error('Error compartiendo boucher:', error);
       throw new Error('No se pudo compartir el boucher');
     }

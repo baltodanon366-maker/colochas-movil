@@ -292,6 +292,7 @@ export const NuevaVentaScreen: React.FC = () => {
                 onFocus={() => setInputFocus('numero')}
                 keyboardType="numeric"
                 maxLength={2}
+                showSoftInputOnFocus={false}
               />
             </View>
             <View style={styles.inputHalf}>
@@ -302,6 +303,7 @@ export const NuevaVentaScreen: React.FC = () => {
                 onChangeText={setMontoInput}
                 onFocus={() => setInputFocus('monto')}
                 keyboardType="decimal-pad"
+                showSoftInputOnFocus={false}
               />
             </View>
           </View>
