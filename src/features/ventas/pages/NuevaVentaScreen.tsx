@@ -121,6 +121,15 @@ export const NuevaVentaScreen: React.FC = () => {
     }
   };
 
+  const handleNumeroChange = (text: string) => {
+    const digits = text.replace(/\D/g, '').slice(0, 2);
+    const num = parseInt(digits, 10);
+    if (digits.length <= 2 && (digits === '' || num <= 99)) {
+      setNumeroInput(digits);
+      if (digits.length === 2) setInputFocus('monto');
+    }
+  };
+
   const handleFechaChange = (newFecha: string) => {
     setFecha(newFecha);
     if (turno) {
@@ -140,6 +149,7 @@ export const NuevaVentaScreen: React.FC = () => {
         const newValue = numeroInput + value;
         if (newValue.length <= 2 && parseInt(newValue) <= 99) {
           setNumeroInput(newValue);
+          if (newValue.length === 2) setInputFocus('monto');
         }
       }
     } else if (inputFocus === 'monto') {
@@ -362,7 +372,7 @@ export const NuevaVentaScreen: React.FC = () => {
                 label="Número (0-99)"
                 placeholder="00"
                 value={numeroInput}
-                onChangeText={setNumeroInput}
+                onChangeText={handleNumeroChange}
                 onFocus={() => setInputFocus('numero')}
                 keyboardType="numeric"
                 maxLength={2}

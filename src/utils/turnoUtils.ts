@@ -15,6 +15,7 @@ function parseHoraToMinutes(hora: string): number {
 /**
  * Detecta el turno actual (por defecto) en hora Nicaragua.
  * Ventas desde las 6 AM. Turno actual = primer turno cuya ventana [hora, hora_cierre - tiempoBloqueo) contiene la hora actual.
+ * Si no hay ninguno en esa ventana pero hay turnos vendibles, devuelve el primero de ellos para que siempre se pueda crear venta.
  * @param turnos Lista de turnos activos de una categoría
  * @returns El turno actual o null (ej. antes de las 6 AM o después del último cierre)
  */
@@ -26,21 +27,25 @@ export function detectarTurnoActual(turnos: Turno[]): Turno | null {
 
   if (minutosActuales < MINUTOS_INICIO_VENTAS) return null;
 
+  const today = getNicaraguaDate();
   const turnosOrdenados = turnos
-    .filter((t) => t.estado === 'activo' && t.hora && t.horaCierre)
+    .filter((t) => t.estado === 'activo' && t.hora && (t.horaCierre ?? (t as any).hora_cierre))
     .map((t) => {
+      const horaCierre = t.horaCierre ?? (t as any).hora_cierre ?? t.hora!;
       const minutosInicio = parseHoraToMinutes(t.hora!);
-      const minutosCierre = parseHoraToMinutes(t.horaCierre!);
-      const bloqueo = t.tiempoBloqueo ?? MINUTOS_BLOQUEO_DEFAULT;
-      const limiteVenta = minutosCierre - bloqueo; // 10 min antes del cierre se bloquea
+      const minutosCierre = parseHoraToMinutes(horaCierre);
+      const bloqueo = t.tiempoBloqueo ?? (t as any).tiempo_bloqueo ?? MINUTOS_BLOQUEO_DEFAULT;
+      const limiteVenta = minutosCierre - bloqueo;
       return { turno: t, minutosInicio, minutosCierre, limiteVenta };
     })
     .sort((a, b) => a.minutosInicio - b.minutosInicio);
 
-  const actual = turnosOrdenados.find(
+  let actual = turnosOrdenados.find(
     (t) => minutosActuales >= t.minutosInicio && minutosActuales < t.limiteVenta
   );
-  return actual ? actual.turno : null;
+  if (actual) return actual.turno;
+  const proximos = getTurnosProximos(turnos, today);
+  return proximos.length > 0 ? proximos[0] : null;
 }
 
 /**
@@ -53,14 +58,15 @@ export function turnoYaPasado(turno: Turno, fecha: string): boolean {
   const today = getNicaraguaDate();
   if (fecha < today) return true;
   if (fecha > today) return false;
-  if (!turno.hora || !turno.horaCierre) return false;
+  const horaCierre = turno.horaCierre ?? (turno as any).hora_cierre;
+  if (!turno.hora || !horaCierre) return false;
 
   const nowNic = getNicaraguaDateTime();
   const minutosActuales = nowNic.getHours() * 60 + nowNic.getMinutes();
 
   if (minutosActuales < MINUTOS_INICIO_VENTAS) return true; // Antes de las 6 AM ningún turno está disponible hoy
-  const minutosCierre = parseHoraToMinutes(turno.horaCierre);
-  const bloqueo = turno.tiempoBloqueo ?? MINUTOS_BLOQUEO_DEFAULT;
+  const minutosCierre = parseHoraToMinutes(horaCierre);
+  const bloqueo = turno.tiempoBloqueo ?? (turno as any).tiempo_bloqueo ?? MINUTOS_BLOQUEO_DEFAULT;
   return minutosActuales >= minutosCierre - bloqueo;
 }
 
@@ -79,7 +85,7 @@ export function getTurnosProximos(turnos: Turno[], fecha: string): Turno[] {
   }
 
   return turnos
-    .filter((t) => t.estado === 'activo' && t.hora && t.horaCierre && !turnoYaPasado(t, fecha))
+    .filter((t) => t.estado === 'activo' && t.hora && (t.horaCierre ?? (t as any).hora_cierre) && !turnoYaPasado(t, fecha))
     .map((t) => ({
       turno: t,
       minutosInicio: parseHoraToMinutes(t.hora!),

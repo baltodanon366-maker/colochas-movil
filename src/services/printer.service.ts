@@ -1,6 +1,10 @@
 import { Venta } from '../types';
 import { Alert, Platform, Share } from 'react-native';
-import { formatDateString, formatTimeString } from '../utils/dateUtils';
+import { formatDateString } from '../utils/dateUtils';
+import * as IntentLauncher from 'expo-intent-launcher';
+
+/** Package de la app "Thermal Printer" en Android. Si usas otra app, cámbialo aquí. */
+const THERMAL_PRINTER_PACKAGE = 'com.imrot.thermal.printer';
 
 /**
  * Configuración para la impresión del boucher
@@ -52,65 +56,33 @@ class PrinterService {
   }
 
   /**
-   * Generar texto del boucher para impresión (optimizado para impresoras térmicas)
+   * Generar texto del boucher para impresión (resumido para ahorrar material)
+   * Solo: nombre, fecha, código, números con monto individual, total.
    */
   private generateBoucherText(venta: Venta, config?: BoucherConfig): string {
-    const empresa = config?.nombreEmpresa || '$ LA CHELITA $';
+    const empresa = config?.nombreEmpresa || 'La Chelita';
     const fecha = formatDateString(venta.fecha || (venta.fechaHora ? venta.fechaHora.split('T')[0] : null) || new Date().toISOString().split('T')[0]);
-    const hora = formatTimeString(venta.fechaHora || venta.fecha);
-    const vendedorNombre = venta.usuario?.name || 'Vendedor';
-    const fechaVenta = formatDateString(venta.fecha);
     const detalles = venta.detallesVenta || venta.detalles || [];
     const total = Number(venta.total).toFixed(2);
 
-    // Ancho típico de impresoras térmicas: 48-58 caracteres
     const WIDTH = 48;
-    const SEPARATOR = '='.repeat(WIDTH);
-    
+    const SEPARATOR = '-'.repeat(WIDTH);
+
     let boucherText = '';
-    
-    // ===== ENCABEZADO =====
     boucherText += `${empresa}\n`;
     boucherText += `${SEPARATOR}\n`;
-    boucherText += `Fecha: ${fecha} - ${hora}\n`;
-    boucherText += `Boucher: ${venta.numeroBoucher}\n`;
-    boucherText += `Vendedor: ${vendedorNombre}\n`;
+    boucherText += `${fecha}   ${venta.numeroBoucher}\n`;
     boucherText += `${SEPARATOR}\n`;
-    boucherText += 'REVISE SU BOLETO\n';
-    boucherText += 'NO SE ACEPTAN RECLAMOS\n';
-    boucherText += 'DESPUES DEL SORTEO\n';
-    boucherText += 'SIN BOLETO NO HAY PREMIO\n';
-    boucherText += `${SEPARATOR}\n`;
-    
-    // ===== TABLA DE NÚMEROS =====
-    boucherText += 'NUMERO          MONTO\n';
-    boucherText += `${SEPARATOR}\n`;
-    
+
     for (const detalle of detalles) {
       const numero = detalle.numero.toString().padStart(2, '0');
       const monto = `C$${Number(detalle.monto).toFixed(2)}`;
-      // Formato: "00              C$100.00"
-      boucherText += `${numero.padEnd(15)}${monto.padStart(12)}\n`;
+      boucherText += `${numero}   ${monto}\n`;
     }
-    
-    // ===== TOTAL =====
+
     boucherText += `${SEPARATOR}\n`;
-    boucherText += `TOTAL: C$${total.padStart(WIDTH - 8)}\n`;
-    boucherText += `${SEPARATOR}\n`;
-    
-    // ===== PIE DE PÁGINA =====
-    if (venta.turno?.mensaje) {
-      boucherText += `${venta.turno.mensaje}\n`;
-      boucherText += `${SEPARATOR}\n`;
-    }
-    
-    if (config?.mensajePersonalizado) {
-      boucherText += `${config.mensajePersonalizado}\n`;
-      boucherText += `${SEPARATOR}\n`;
-    }
-    
-    boucherText += '\n¡Gracias por su compra!\n';
-    boucherText += '\n\n'; // Espacios finales para cortar papel
+    boucherText += `TOTAL   C$${total}\n`;
+    boucherText += '\n\n';
 
     return boucherText;
   }
@@ -213,8 +185,35 @@ class PrinterService {
         } else {
           throw new Error('No se pudo abrir la ventana de impresión');
         }
+      } else if (Platform.OS === 'android' && THERMAL_PRINTER_PACKAGE) {
+        // Android: abrir directamente la app "Thermal Printer" con el texto del boucher
+        const boucherText = this.generateBoucherText(venta, config);
+        try {
+          await IntentLauncher.startActivityAsync('android.intent.action.SEND', {
+            type: 'text/plain',
+            packageName: THERMAL_PRINTER_PACKAGE,
+            extra: {
+              'android.intent.extra.TEXT': boucherText,
+            },
+          });
+          // Al volver de Thermal Printer, la promesa se resuelve (el flujo continúa en BoucherPreviewScreen)
+        } catch (err: any) {
+          // App no instalada o usuario canceló: usar flujo anterior
+          const useFallback = !err?.message?.includes('cancel');
+          if (useFallback) {
+            Alert.alert(
+              'Opciones de Impresión',
+              'Thermal Printer no está disponible. Selecciona otra opción:',
+              [
+                { text: 'Compartir', onPress: () => this.shareBoucher(venta, config) },
+                { text: 'Copiar', onPress: () => this.copyBoucher(venta, config) },
+                { text: 'Cancelar', style: 'cancel' },
+              ]
+            );
+          }
+        }
       } else {
-        // En móvil, mostrar opciones disponibles
+        // iOS u otro: mostrar opciones disponibles
         Alert.alert(
           'Opciones de Impresión',
           'Selecciona una opción para tu boucher:',

@@ -17,7 +17,7 @@ import { Button } from '../../../components/Button';
 import { Colors } from '../../../constants/colors';
 import { Venta } from '../../../types';
 import { printerService } from '../../../services/printer.service';
-import { formatDateString, formatTimeString } from '../../../utils/dateUtils';
+import { formatDateString } from '../../../utils/dateUtils';
 
 export const BoucherPreviewScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -70,7 +70,7 @@ export const BoucherPreviewScreen: React.FC = () => {
     setPrinting(true);
     try {
       await printerService.printBoucher(venta, {
-        nombreEmpresa: '$ LA CHELITA $',
+        nombreEmpresa: 'La Chelita',
       });
       // Navegar automáticamente al formulario de nueva venta después de imprimir
       navigateToNuevaVenta();
@@ -99,81 +99,36 @@ export const BoucherPreviewScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={true}
       >
-        {/* Encabezado del Boucher */}
-        <View style={styles.header}>
-          <Text style={styles.title}>BOUCHER DE VENTA</Text>
-          <Text style={styles.boucherNumber}>{venta.numeroBoucher}</Text>
-        </View>
-
-        {/* Información de la Venta */}
-        <View style={styles.section}>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Fecha:</Text>
-            <Text style={styles.value}>
+        {/* Boucher resumido: nombre, fecha, código, números, total */}
+        <View style={styles.boucherPaper}>
+          <Text style={styles.empresa}>La Chelita</Text>
+          <View style={styles.separator} />
+          <View style={styles.filaCodigo}>
+            <Text style={styles.fecha}>
               {formatDateString(venta.fecha || (venta.fechaHora ? venta.fechaHora.split('T')[0] : null) || new Date().toISOString().split('T')[0])}
             </Text>
+            <Text style={styles.codigo}>{venta.numeroBoucher}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Hora:</Text>
-            <Text style={styles.value}>
-              {formatTimeString(venta.fechaHora, true)}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Turno:</Text>
-            <Text style={styles.value}>
-              {venta.turno?.nombre || `Turno ${venta.turnoId}`}
-            </Text>
-          </View>
-          {venta.usuario && (
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Vendedor:</Text>
-              <Text style={styles.value}>{venta.usuario.name}</Text>
-            </View>
-          )}
-        </View>
+          <View style={styles.separator} />
 
-        {/* Detalles de la Venta */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Números Vendidos</Text>
           {(venta.detallesVenta || venta.detalles) && (venta.detallesVenta || venta.detalles)!.length > 0 ? (
-            <View style={styles.detallesContainer}>
+            <>
               {(venta.detallesVenta || venta.detalles)!.map((detalle, index) => (
-                <View key={index} style={styles.detalleRow}>
-                  <Text style={styles.detalleNumero}>
-                    {detalle.numero.toString().padStart(2, '0')}
-                  </Text>
-                  <Text style={styles.detalleMonto}>
-                    ${Number(detalle.monto).toFixed(2)}
-                  </Text>
+                <View key={index} style={styles.filaNumero}>
+                  <Text style={styles.detalleNumero}>{detalle.numero.toString().padStart(2, '0')}</Text>
+                  <Text style={styles.detalleMonto}>C${Number(detalle.monto).toFixed(2)}</Text>
                 </View>
               ))}
-            </View>
+              <View style={styles.separator} />
+              <View style={styles.filaTotal}>
+                <Text style={styles.totalLabel}>TOTAL</Text>
+                <Text style={styles.totalValue}>C${Number(venta.total).toFixed(2)}</Text>
+              </View>
+            </>
           ) : (
-            <Text style={styles.noDetalles}>No hay detalles disponibles</Text>
+            <Text style={styles.noDetalles}>No hay detalles</Text>
           )}
         </View>
-
-        {/* Total */}
-        <View style={styles.totalSection}>
-          <Text style={styles.totalLabel}>TOTAL:</Text>
-          <Text style={styles.totalValue}>${Number(venta.total).toFixed(2)}</Text>
-        </View>
-
-        {/* Observaciones */}
-        {venta.observaciones && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Observaciones</Text>
-            <Text style={styles.observaciones}>{venta.observaciones}</Text>
-          </View>
-        )}
-
-        {/* Mensaje del Turno */}
-        {venta.turno?.mensaje && (
-          <View style={styles.mensajeSection}>
-            <Text style={styles.mensajeText}>{venta.turno.mensaje}</Text>
-          </View>
-        )}
 
         {/* Botones de Acción */}
         <View style={styles.actions}>
@@ -209,128 +164,78 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
-  header: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.primary,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 8,
-  },
-  boucherNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.secondary,
-    letterSpacing: 2,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.medium,
-    paddingBottom: 8,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
-  },
-  label: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    fontWeight: '500',
-  },
-  value: {
-    fontSize: 14,
-    color: Colors.text.primary,
-    fontWeight: '600',
-  },
-  detallesContainer: {
-    gap: 8,
-  },
-  detalleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: Colors.background.tertiary,
+  boucherPaper: {
+    backgroundColor: '#fff',
+    padding: 20,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.border.light,
+    marginBottom: 20,
+    maxWidth: 320,
+    alignSelf: 'center',
   },
-  detalleNumero: {
-    fontSize: 16,
+  empresa: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.primary,
-    minWidth: 40,
-  },
-  detalleMonto: {
-    fontSize: 16,
-    fontWeight: '600',
     color: Colors.text.primary,
-  },
-  noDetalles: {
-    fontSize: 14,
-    color: Colors.text.tertiary,
-    fontStyle: 'italic',
     textAlign: 'center',
-    padding: 20,
+    marginBottom: 8,
   },
-  totalSection: {
+  separator: {
+    height: 1,
+    backgroundColor: Colors.border.medium,
+    marginVertical: 8,
+  },
+  filaCodigo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: Colors.successLight,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.success,
-    marginBottom: 20,
+  },
+  fecha: {
+    fontSize: 14,
+    color: Colors.text.primary,
+  },
+  codigo: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  filaNumero: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  detalleNumero: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  detalleMonto: {
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  filaTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
   },
   totalLabel: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     color: Colors.text.primary,
   },
   totalValue: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: 'bold',
     color: Colors.success,
   },
-  observaciones: {
+  noDetalles: {
     fontSize: 14,
-    color: Colors.text.secondary,
-    fontStyle: 'italic',
-    padding: 12,
-    backgroundColor: Colors.background.tertiary,
-    borderRadius: 8,
-  },
-  mensajeSection: {
-    padding: 16,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    marginBottom: 20,
-  },
-  mensajeText: {
-    fontSize: 14,
-    color: Colors.text.primary,
+    color: Colors.text.tertiary,
     textAlign: 'center',
-    fontWeight: '500',
+    padding: 12,
   },
   actions: {
     marginTop: 20,
