@@ -9,7 +9,6 @@ import { Colors } from '../constants/colors';
 
 // Auth Pages
 import { LoginScreen } from '../features/auth/pages/LoginScreen';
-import { ResetPasswordScreen } from '../features/auth/pages/ResetPasswordScreen';
 
 // Main Pages
 import { DashboardScreen } from '../features/dashboard/pages/DashboardScreen';
@@ -24,6 +23,7 @@ import { VentaDetalleScreen } from '../features/ventas/pages/VentaDetalleScreen'
 
 // New Form Screens
 import { NuevaVentaScreen } from '../features/ventas/pages/NuevaVentaScreen';
+import { SeleccionarTurnoScreen } from '../features/ventas/pages/SeleccionarTurnoScreen';
 import { CreateUserScreen } from '../features/users/pages/CreateUserScreen';
 import { EditUserScreen } from '../features/users/pages/EditUserScreen';
 import { CreateTurnoScreen } from '../features/cierres/pages/CreateTurnoScreen';
@@ -35,13 +35,13 @@ import { NumeroDetalleScreen } from '../features/historial/pages/NumeroDetalleSc
 
 export type RootStackParamList = {
   Login: undefined;
-  ResetPassword: undefined;
   MainTabs: undefined;
   Perfil: undefined;
   UserManagement: undefined;
   VentaDetalle: { ventaId: number };
   AnalisisNumeros: undefined;
   NuevaVenta: { turnoId: number; categoria?: string; onSuccess?: () => void };
+  SeleccionarTurno: { categoria: string; fecha?: string; turnoIdActual?: number; onSuccess?: () => void };
   CreateUser: { availableRoles?: any[]; onSuccess?: () => void };
   EditUser: { userId: number; availableRoles?: any[]; onReload?: () => void };
   CreateTurno: { onSuccess?: () => void };
@@ -181,6 +181,11 @@ export const AppNavigator: React.FC = () => {
               options={{ headerShown: false }}
             />
             <Stack.Screen 
+              name="SeleccionarTurno" 
+              component={SeleccionarTurnoScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
               name="CreateUser" 
               component={CreateUserScreen}
               options={{ headerShown: false }}
@@ -222,10 +227,7 @@ export const AppNavigator: React.FC = () => {
             />
           </>
         ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-          </>
+          <Stack.Screen name="Login" component={LoginScreen} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

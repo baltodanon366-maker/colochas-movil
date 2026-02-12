@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from '../config/api.config';
 export interface User {
   id: number;
   name: string;
-  email: string;
+  telefono: string;
   estado: 'activo' | 'inactivo';
   lastLogin?: string;
   createdAt: string;
@@ -19,20 +19,14 @@ export interface User {
 
 export interface CreateUserDto {
   name: string;
-  email: string;
-  password: string;
+  telefono: string;
   roleIds?: number[];
 }
 
 export interface UpdateUserDto {
   name?: string;
-  email?: string;
+  telefono?: string;
   estado?: 'activo' | 'inactivo';
-}
-
-export interface UpdatePasswordDto {
-  currentPassword: string;
-  newPassword: string;
 }
 
 export interface UserWithPagination {
@@ -52,11 +46,11 @@ function buildQueryString(params: {
   page?: number;
   limit?: number;
   offset?: number;
-  filterField?: 'email' | 'name';
+  filterField?: 'telefono' | 'name';
   filterRule?: 'eq' | 'like' | 'nlike';
   filterValue?: string;
-  sortField?: 'email' | 'name' | 'createdAt';
-  sortBy?: 'email' | 'name' | 'createdAt';
+  sortField?: 'telefono' | 'name' | 'createdAt';
+  sortBy?: 'telefono' | 'name' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
 }): string {
   const queryParams = new URLSearchParams();
@@ -83,11 +77,11 @@ class UsersService {
     page?: number;
     limit?: number;
     offset?: number;
-    filterField?: 'email' | 'name';
+    filterField?: 'telefono' | 'name';
     filterRule?: 'eq' | 'like' | 'nlike';
     filterValue?: string;
-    sortField?: 'email' | 'name' | 'createdAt';
-    sortBy?: 'email' | 'name' | 'createdAt';
+    sortField?: 'telefono' | 'name' | 'createdAt';
+    sortBy?: 'telefono' | 'name' | 'createdAt';
     sortOrder?: 'ASC' | 'DESC';
   }): Promise<ApiResponse<UserWithPagination>> {
     const queryString = params ? buildQueryString(params) : '';
@@ -123,27 +117,10 @@ class UsersService {
   }
 
   /**
-   * Actualizar contraseña del usuario
+   * Eliminar usuario (hard delete). Sus ventas dejan de aparecer en el historial.
    */
-  async updatePassword(id: number, data: UpdatePasswordDto): Promise<ApiResponse<{ message: string }>> {
-    return apiService.post<{ message: string }>(
-      API_ENDPOINTS.USERS.UPDATE_PASSWORD(id),
-      data
-    );
-  }
-
-  /**
-   * Activar un usuario (solo admin)
-   */
-  async activate(id: number): Promise<ApiResponse<{ message: string }>> {
-    return apiService.post<{ message: string }>(API_ENDPOINTS.USERS.ACTIVATE(id));
-  }
-
-  /**
-   * Desactivar un usuario (solo admin)
-   */
-  async deactivate(id: number): Promise<ApiResponse<{ message: string }>> {
-    return apiService.post<{ message: string }>(API_ENDPOINTS.USERS.DEACTIVATE(id));
+  async delete(id: number): Promise<ApiResponse<{ message: string }>> {
+    return apiService.delete<{ message: string }>(API_ENDPOINTS.USERS.BY_ID(id));
   }
 
   /**

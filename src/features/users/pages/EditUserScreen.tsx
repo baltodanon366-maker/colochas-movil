@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AppHeader } from '../../../components/AppHeader';
 import { SubHeaderBar } from '../../../components/SubHeaderBar';
@@ -17,7 +17,7 @@ export const EditUserScreen: React.FC = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -35,11 +35,13 @@ export const EditUserScreen: React.FC = () => {
 
     try {
       setLoading(true);
-      const userData = await usersService.getById(userId);
-      setUser(userData);
-      setName(userData.name || '');
-      setEmail(userData.email || '');
-      setSelectedRoleIds(userData.roles?.map((r) => r.id) || []);
+      const response = await usersService.getById(userId);
+      const userData = (response as any).data ?? response;
+      const u = userData as User;
+      setUser(u);
+      setName(u.name || '');
+      setTelefono(u.telefono || '');
+      setSelectedRoleIds(u.roles?.map((r) => r.id) || []);
     } catch (error: any) {
       Alert.alert('Error', 'No se pudo cargar el usuario');
       navigation.goBack();
@@ -51,8 +53,8 @@ export const EditUserScreen: React.FC = () => {
   const handleSave = async () => {
     if (!user) return;
 
-    if (!name || !email) {
-      Alert.alert('Error', 'Completa todos los campos requeridos');
+    if (!name.trim() || telefono.length !== 8) {
+      Alert.alert('Error', 'Nombre y teléfono (8 dígitos) son requeridos');
       return;
     }
 
@@ -62,8 +64,8 @@ export const EditUserScreen: React.FC = () => {
       if (name !== user.name) {
         updateData.name = name;
       }
-      if (email !== user.email) {
-        updateData.email = email;
+      if (telefono !== user.telefono) {
+        updateData.telefono = telefono;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -143,12 +145,12 @@ export const EditUserScreen: React.FC = () => {
         />
 
         <Input
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="email@ejemplo.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
+          label="Número de teléfono"
+          value={telefono}
+          onChangeText={(text) => setTelefono(text.replace(/\D/g, '').slice(0, 8))}
+          placeholder="8 dígitos"
+          keyboardType="number-pad"
+          maxLength={8}
           containerStyle={styles.inputContainer}
         />
 

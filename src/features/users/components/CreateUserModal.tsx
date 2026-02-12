@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Modal } from '../../../components/Modal';
 import { Input } from '../../../components/Input';
 import { Select } from '../../../components/Select';
@@ -8,7 +8,6 @@ import { Colors } from '../../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Role } from '../../../services/roles.service';
 import { usersService, CreateUserDto } from '../../../services/users.service';
-import { Alert } from 'react-native';
 
 interface CreateUserModalProps {
   visible: boolean;
@@ -24,59 +23,52 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   onSuccess,
 }) => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [creating, setCreating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const handleTelefonoChange = (text: string) => {
+    setTelefono(text.replace(/\D/g, '').slice(0, 8));
+  };
+
   useEffect(() => {
     if (!visible) {
       setName('');
-      setEmail('');
-      setPassword('');
+      setTelefono('');
       setSelectedRoleIds([]);
       setShowSuccess(false);
     }
   }, [visible]);
 
-
   const handleCreate = async () => {
-    if (!name || !email || !password) {
+    if (!name.trim() || !telefono) {
       Alert.alert('Error', 'Completa todos los campos requeridos');
       return;
     }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+    if (telefono.length !== 8) {
+      Alert.alert('Error', 'El número de teléfono debe tener exactamente 8 dígitos');
       return;
     }
 
     setCreating(true);
     try {
       const createData: CreateUserDto = {
-        name,
-        email,
-        password,
+        name: name.trim(),
+        telefono,
         roleIds: selectedRoleIds.length > 0 ? selectedRoleIds : undefined,
       };
 
-      console.log('Datos a enviar:', createData); // Log temporal para depurar
       const response = await usersService.create(createData);
-      console.log('Respuesta recibida:', response); // Log temporal para depurar
-      
+
       if (response.succeeded) {
-        // Mostrar mensaje de éxito
         setShowSuccess(true);
-        
-        // Esperar 1.5 segundos para que el usuario vea el mensaje
         setTimeout(() => {
           setShowSuccess(false);
           onClose();
           onSuccess();
         }, 1500);
       } else {
-        // Si la respuesta tiene succeeded: false, mostrar el error directamente
         Alert.alert(
           response.title || 'Error',
           response.message || 'Error al crear usuario'
@@ -84,18 +76,14 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       }
     } catch (error: any) {
       console.error('Error al crear usuario:', error);
-      
-      // Extraer mensaje de error
+
       let errorMessage = 'No se pudo crear el usuario';
       let errorTitle = 'Error';
-      
-      // Si el error ya es un ApiResponse (del apiService mejorado)
+
       if (error.succeeded === false && error.message) {
         errorTitle = error.title || 'Error';
         errorMessage = error.message;
-      } 
-      // Si es un error HTTP directo
-      else if (error.response?.data) {
+      } else if (error.response?.data) {
         const errorData = error.response.data;
         if (errorData.succeeded === false && errorData.message) {
           errorTitle = errorData.title || 'Error';
@@ -107,12 +95,10 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
         } else if (typeof errorData === 'string') {
           errorMessage = errorData;
         }
-      } 
-      // Si tiene un mensaje directo
-      else if (error.message) {
+      } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert(errorTitle, errorMessage);
     } finally {
       setCreating(false);
@@ -137,30 +123,21 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
           </View>
         ) : (
           <>
-            <Input 
-              label="Nombre" 
-              value={name} 
-              onChangeText={setName} 
+            <Input
+              label="Nombre"
+              value={name}
+              onChangeText={setName}
               placeholder="Nombre completo"
               containerStyle={styles.inputContainer}
             />
 
             <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="email@ejemplo.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              containerStyle={styles.inputContainer}
-            />
-
-            <Input
-              label="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mínimo 6 caracteres"
-              secureTextEntry
+              label="Número de teléfono"
+              value={telefono}
+              onChangeText={handleTelefonoChange}
+              placeholder="8 dígitos"
+              keyboardType="number-pad"
+              maxLength={8}
               containerStyle={styles.inputContainer}
             />
 
@@ -181,7 +158,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
               title="Crear Usuario"
               onPress={handleCreate}
               loading={creating}
-              disabled={!name || !email || !password}
+              disabled={!name.trim() || telefono.length !== 8}
               style={styles.createButton}
             />
           </>
@@ -229,4 +206,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

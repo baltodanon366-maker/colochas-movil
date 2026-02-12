@@ -17,45 +17,44 @@ export const CreateUserScreen: React.FC = () => {
   const { availableRoles = [], onSuccess } = route.params as any || {};
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [creating, setCreating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const handleTelefonoChange = (text: string) => {
+    setTelefono(text.replace(/\D/g, '').slice(0, 8));
+  };
+
   useEffect(() => {
     return () => {
-      // Limpiar al desmontar
       setName('');
-      setEmail('');
-      setPassword('');
+      setTelefono('');
       setSelectedRoleIds([]);
       setShowSuccess(false);
     };
   }, []);
 
   const handleCreate = async () => {
-    if (!name || !email || !password) {
+    if (!name.trim() || !telefono) {
       Alert.alert('Error', 'Completa todos los campos requeridos');
       return;
     }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+    if (telefono.length !== 8) {
+      Alert.alert('Error', 'El número de teléfono debe tener exactamente 8 dígitos');
       return;
     }
 
     setCreating(true);
     try {
       const createData: CreateUserDto = {
-        name,
-        email,
-        password,
+        name: name.trim(),
+        telefono,
         roleIds: selectedRoleIds.length > 0 ? selectedRoleIds : undefined,
       };
 
       const response = await usersService.create(createData);
-      
+
       if (response.succeeded) {
         setShowSuccess(true);
         setTimeout(() => {
@@ -71,10 +70,10 @@ export const CreateUserScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error al crear usuario:', error);
-      
+
       let errorMessage = 'No se pudo crear el usuario';
       let errorTitle = 'Error';
-      
+
       if (error.succeeded === false && error.message) {
         errorTitle = error.title || 'Error';
         errorMessage = error.message;
@@ -93,7 +92,7 @@ export const CreateUserScreen: React.FC = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert(errorTitle, errorMessage);
     } finally {
       setCreating(false);
@@ -107,13 +106,13 @@ export const CreateUserScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <AppHeader />
-      
+
       <SubHeaderBar
         title="Crear Nuevo Usuario"
         onBack={handleBack}
       />
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={true}
@@ -128,30 +127,21 @@ export const CreateUserScreen: React.FC = () => {
           </View>
         ) : (
           <>
-            <Input 
-              label="Nombre" 
-              value={name} 
-              onChangeText={setName} 
+            <Input
+              label="Nombre"
+              value={name}
+              onChangeText={setName}
               placeholder="Nombre completo"
               containerStyle={styles.inputContainer}
             />
 
             <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="email@ejemplo.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              containerStyle={styles.inputContainer}
-            />
-
-            <Input
-              label="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mínimo 6 caracteres"
-              secureTextEntry
+              label="Número de teléfono"
+              value={telefono}
+              onChangeText={handleTelefonoChange}
+              placeholder="8 dígitos"
+              keyboardType="number-pad"
+              maxLength={8}
               containerStyle={styles.inputContainer}
             />
 
@@ -172,7 +162,7 @@ export const CreateUserScreen: React.FC = () => {
               title="Crear Usuario"
               onPress={handleCreate}
               loading={creating}
-              disabled={!name || !email || !password}
+              disabled={!name.trim() || telefono.length !== 8}
               style={styles.createButton}
             />
           </>

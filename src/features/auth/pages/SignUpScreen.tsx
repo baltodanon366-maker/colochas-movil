@@ -16,31 +16,33 @@ import { Colors } from '../../../constants/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export const SignUpScreen: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigation = useNavigation<any>();
 
+  const handleTelefonoChange = (text: string) => {
+    setTelefono(text.replace(/\D/g, '').slice(0, 8));
+  };
+
   const handleSignUp = async () => {
-    if (!email || !password || !name) {
-      Alert.alert('Error', 'Por favor completa los campos requeridos');
+    if (!name.trim() || !telefono) {
+      Alert.alert('Error', 'Por favor completa nombre y teléfono');
       return;
     }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+    if (telefono.length !== 8) {
+      Alert.alert('Error', 'El número de teléfono debe tener 8 dígitos');
       return;
     }
 
     setLoading(true);
     try {
-      await signUp(email, password, name, username || undefined);
+      await signUp(name.trim(), telefono, username || undefined);
       Alert.alert(
         'Registro exitoso',
-        'Tu cuenta ha sido creada exitosamente. Un administrador debe activar tu cuenta antes de que puedas iniciar sesión. Te notificaremos cuando tu cuenta esté lista.',
+        'Tu cuenta ha sido creada. Un administrador debe activar tu cuenta antes de que puedas iniciar sesión.',
         [
           {
             text: 'Ir a Login',
@@ -66,7 +68,7 @@ export const SignUpScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -88,13 +90,12 @@ export const SignUpScreen: React.FC = () => {
               />
 
               <Input
-                label="Email"
-                placeholder="Ingresa tu email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
+                label="Número de teléfono"
+                placeholder="8 dígitos"
+                value={telefono}
+                onChangeText={handleTelefonoChange}
+                keyboardType="number-pad"
+                maxLength={8}
                 containerStyle={styles.inputContainer}
               />
 
@@ -107,20 +108,11 @@ export const SignUpScreen: React.FC = () => {
                 containerStyle={styles.inputContainer}
               />
 
-              <Input
-                label="Contraseña"
-                placeholder="Mínimo 6 caracteres"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                containerStyle={styles.inputContainer}
-              />
-
               <Button
                 title="Registrarse"
                 onPress={handleSignUp}
                 loading={loading}
+                disabled={!name.trim() || telefono.length !== 8}
                 style={styles.signUpButton}
               />
 

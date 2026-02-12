@@ -24,36 +24,39 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   onReload,
 }) => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
       setName(user.name || '');
-      setEmail(user.email || '');
+      setTelefono(user.telefono || '');
       setSelectedRoleIds(user.roles?.map((r) => r.id) || []);
     }
   }, [user, visible]);
+
+  const handleTelefonoChange = (text: string) => {
+    setTelefono(text.replace(/\D/g, '').slice(0, 8));
+  };
 
 
   const handleSave = async () => {
     if (!user) return;
 
-    if (!name || !email) {
-      Alert.alert('Error', 'Completa todos los campos requeridos');
+    if (!name.trim() || telefono.length !== 8) {
+      Alert.alert('Error', 'Nombre y teléfono (8 dígitos) son requeridos');
       return;
     }
 
     setSaving(true);
     try {
-      // 1. Actualizar datos del usuario (nombre y email)
       const updateData: UpdateUserDto = {};
       if (name !== user.name) {
         updateData.name = name;
       }
-      if (email !== user.email) {
-        updateData.email = email;
+      if (telefono !== user.telefono) {
+        updateData.telefono = telefono;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -122,12 +125,12 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
         />
 
         <Input
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="email@ejemplo.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
+          label="Número de teléfono"
+          value={telefono}
+          onChangeText={handleTelefonoChange}
+          placeholder="8 dígitos"
+          keyboardType="number-pad"
+          maxLength={8}
           containerStyle={styles.inputContainer}
         />
 

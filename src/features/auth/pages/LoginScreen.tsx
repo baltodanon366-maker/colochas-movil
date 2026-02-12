@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
@@ -10,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth';
-import { useNavigation } from '@react-navigation/native';
 import { Input } from '../../../components/Input';
 import { Button } from '../../../components/Button';
 import { Colors } from '../../../constants/colors';
@@ -18,26 +16,32 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Images } from '../../../constants/images';
 
 export const LoginScreen: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const navigation = useNavigation<any>();
+
+  const handleTelefonoChange = (text: string) => {
+    const digits = text.replace(/\D/g, '').slice(0, 8);
+    setTelefono(digits);
+  };
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!name.trim() || !telefono) {
       Alert.alert('Error', 'Por favor completa todos los campos');
+      return;
+    }
+    if (telefono.length !== 8) {
+      Alert.alert('Error', 'El número de teléfono debe tener 8 dígitos');
       return;
     }
 
     setLoading(true);
     try {
-      await login(email, password);
-      // La navegación se manejará automáticamente por el AuthProvider
+      await login(name.trim(), telefono);
     } catch (error: any) {
-      // Verificar si el error indica credenciales inválidas
       const errorMessage = error.message || '';
-      const isInvalidCredentials = 
+      const isInvalidCredentials =
         errorMessage.toLowerCase().includes('credenciales') ||
         errorMessage.toLowerCase().includes('inválidas') ||
         errorMessage.toLowerCase().includes('invalid') ||
@@ -47,7 +51,7 @@ export const LoginScreen: React.FC = () => {
       if (isInvalidCredentials) {
         Alert.alert(
           'Usuario no encontrado',
-          'El usuario o la contraseña ingresados no son correctos. Por favor verifica tus credenciales e intenta nuevamente.'
+          'El nombre o el número de teléfono no son correctos. Por favor verifica e intenta nuevamente.'
         );
       } else {
         Alert.alert('Error de inicio de sesión', errorMessage || 'Ocurrió un error al intentar iniciar sesión');
@@ -68,39 +72,35 @@ export const LoginScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
             <View style={styles.logoContainer}>
-              <Image 
-                source={Images.logo} 
+              <Image
+                source={Images.logo}
                 style={styles.logo}
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.subtitle}>Iniciar Sesión</Text>
-
             <View style={styles.form}>
               <Input
-                label="Email"
-                placeholder="Ingresa tu email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
+                label="Nombre de usuario"
+                placeholder="Ingresa tu nombre completo"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
                 containerStyle={styles.inputContainer}
               />
 
               <Input
-                label="Contraseña"
-                placeholder="Ingresa tu contraseña"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
+                label="Número de teléfono"
+                placeholder="8 dígitos"
+                value={telefono}
+                onChangeText={handleTelefonoChange}
+                keyboardType="number-pad"
+                maxLength={8}
                 containerStyle={styles.inputContainer}
               />
 
@@ -110,14 +110,6 @@ export const LoginScreen: React.FC = () => {
                 loading={loading}
                 style={styles.loginButton}
               />
-
-              <View style={styles.linksContainer}>
-                <Button
-                  title="Recuperar Contraseña"
-                  onPress={() => navigation.navigate('ResetPassword')}
-                  style={styles.linkButton}
-                />
-              </View>
             </View>
           </View>
         </ScrollView>
@@ -152,13 +144,6 @@ const styles = StyleSheet.create({
     height: 140,
     maxWidth: '100%',
   },
-  subtitle: {
-    fontSize: 20,
-    textAlign: 'center',
-    marginBottom: 40,
-    color: Colors.text.inverse,
-    fontWeight: '500',
-  },
   form: {
     width: '100%',
     backgroundColor: Colors.background.secondary,
@@ -177,14 +162,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
-  linksContainer: {
-    gap: 12,
-  },
-  linkButton: {
-    marginTop: 8,
-  },
   inputContainer: {
     marginBottom: 20,
   },
 });
-

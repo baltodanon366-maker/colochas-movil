@@ -5,11 +5,9 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string, username?: string) => Promise<void>;
-  // confirmUser eliminado - El endpoint fue eliminado del backend
+  login: (name: string, telefono: string) => Promise<void>;
+  signUp: (name: string, telefono: string, username?: string) => Promise<void>;
   logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +29,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const token = await authService.isAuthenticated();
       const currentUser = await authService.getCurrentUser();
-      
+
       if (token && currentUser) {
         setUser(currentUser);
         setIsAuthenticated(true);
@@ -51,9 +49,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (name: string, telefono: string) => {
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ name, telefono });
       if (response.succeeded && response.data) {
         setUser(response.data.user);
         setIsAuthenticated(true);
@@ -65,9 +63,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, username?: string) => {
+  const signUp = async (name: string, telefono: string, username?: string) => {
     try {
-      const response = await authService.signUp({ email, password, name, username });
+      const response = await authService.signUp({ name, telefono, username });
       if (!response.succeeded) {
         throw new Error(response.message || 'Error al registrar usuario');
       }
@@ -75,9 +73,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw new Error(error.response?.data?.message || error.message || 'Error al registrar usuario');
     }
   };
-
-  // Método eliminado: confirmUser
-  // El endpoint de confirmación fue eliminado del backend
 
   const logout = async () => {
     try {
@@ -89,17 +84,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const resetPassword = async (email: string) => {
-    try {
-      const response = await authService.resetPassword({ email });
-      if (!response.succeeded) {
-        throw new Error(response.message || 'Error al solicitar restablecimiento');
-      }
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message || 'Error al solicitar restablecimiento');
-    }
-  };
-
   const value: AuthContextType = {
     user,
     isLoading,
@@ -107,7 +91,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     signUp,
     logout,
-    resetPassword,
   };
 
   return (

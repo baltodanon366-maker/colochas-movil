@@ -17,20 +17,15 @@ const buildUrl = (endpoint: string): string => {
 export const API_ENDPOINTS = {
   AUTH: {
     SIGNUP: buildUrl('/auth/signUp'),
-    // CONFIRM eliminado - No se utiliza más
     LOGIN: buildUrl('/auth/login'),
-    RESET_PASSWORD: buildUrl('/auth/reset-password'),
     UPDATE_USER: (id: string) => buildUrl(`/auth/${id}`),
-    GET_ALL_USERS: buildUrl('/auth'), // Con paginación y filtros avanzados
+    GET_ALL_USERS: buildUrl('/auth'),
   },
   USERS: {
     BASE: buildUrl('/users'),
     BY_ID: (id: number) => buildUrl(`/users/${id}`),
     CREATE: buildUrl('/users'),
     UPDATE: (id: number) => buildUrl(`/users/${id}`),
-    UPDATE_PASSWORD: (id: number) => buildUrl(`/users/${id}/password`),
-    ACTIVATE: (id: number) => buildUrl(`/users/${id}/activate`),
-    DEACTIVATE: (id: number) => buildUrl(`/users/${id}/deactivate`),
     GET_ROLES: (id: number) => buildUrl(`/users/${id}/roles`),
     ASSIGN_ROLE: (id: number, roleId: number) => buildUrl(`/users/${id}/roles/${roleId}`),
     REMOVE_ROLE: (id: number, roleId: number) => buildUrl(`/users/${id}/roles/${roleId}`),

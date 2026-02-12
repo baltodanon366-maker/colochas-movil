@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../../components/AppHeader';
 import { SubHeaderBar } from '../../../components/SubHeaderBar';
+import { Loading } from '../../../components/Loading';
 import { Card } from '../../../components/Card';
 import { Input } from '../../../components/Input';
 import { Button } from '../../../components/Button';
@@ -11,7 +13,7 @@ import { RestriccionesCard } from '../components/RestriccionesCard';
 import { DetallesList } from '../components/DetallesList';
 import { Colors } from '../../../constants/colors';
 import { Turno, DetalleVenta, Venta } from '../../../types';
-import { formatearNombreTurno } from '../../../utils/turnoUtils';
+import { formatearNombreTurno, getTurnosProximos } from '../../../utils/turnoUtils';
 import { restriccionesService } from '../../restricciones/services/restricciones.service';
 import { ventasService } from '../services/ventas.service';
 import { getNicaraguaDate } from '../../../utils/dateUtils';
@@ -22,31 +24,59 @@ export const NuevaVentaScreen: React.FC = () => {
   const route = useRoute();
   const { turnoId, categoria, onSuccess } = route.params as any || {};
 
-  const [turno, setTurno] = useState<Turno | null>(null);
+  const [turnos, setTurnos] = useState<Turno[]>([]);
   const [loadingTurnos, setLoadingTurnos] = useState(true);
+  const [fecha, setFecha] = useState(getNicaraguaDate());
+  const [selectedTurnoIndex, setSelectedTurnoIndex] = useState(0);
 
   useEffect(() => {
-    loadTurno();
-  }, [turnoId]);
+    loadTurnos();
+  }, [categoria]);
 
-  const loadTurno = async () => {
-    if (!turnoId) {
+  const loadTurnos = async () => {
+    if (!categoria) {
       setLoadingTurnos(false);
       return;
     }
-
     try {
       setLoadingTurnos(true);
-      const turnoData = await turnosService.getById(turnoId);
-      setTurno(turnoData);
+      const data = await turnosService.getActivos(categoria);
+      setTurnos(data || []);
     } catch (error) {
-      console.error('Error al cargar turno:', error);
+      console.error('Error al cargar turnos:', error);
+      setTurnos([]);
     } finally {
       setLoadingTurnos(false);
     }
   };
 
-  const [fecha, setFecha] = useState(getNicaraguaDate());
+  const turnosProximos = useMemo(
+    () => getTurnosProximos(turnos, fecha),
+    [turnos, fecha]
+  );
+
+  const turno = turnosProximos[selectedTurnoIndex] ?? null;
+
+  // Sincronizar índice cuando cambian turnos próximos (p. ej. al cambiar fecha)
+  useEffect(() => {
+    if (turnosProximos.length === 0) return;
+    const idxById = turnosProximos.findIndex((t) => t.id === turnoId);
+    if (idxById >= 0 && selectedTurnoIndex !== idxById) {
+      setSelectedTurnoIndex(idxById);
+    } else if (selectedTurnoIndex >= turnosProximos.length) {
+      setSelectedTurnoIndex(0);
+    }
+  }, [turnosProximos, turnoId]);
+
+  const handleSeleccionarTurno = () => {
+    navigation.navigate('SeleccionarTurno', {
+      categoria,
+      fecha,
+      turnoIdActual: turno?.id,
+      onSuccess,
+    });
+  };
+
   const [detalles, setDetalles] = useState<DetalleVenta[]>([]);
   const [numeroInput, setNumeroInput] = useState('');
   const [montoInput, setMontoInput] = useState('');
@@ -233,13 +263,49 @@ export const NuevaVentaScreen: React.FC = () => {
 
   const total = detalles.reduce((sum, d) => sum + d.monto, 0);
 
-  if (!turno && !loadingTurnos) {
+  if (loadingTurnos && turnos.length === 0) {
+    return (
+      <View style={styles.container}>
+        <AppHeader />
+        <SubHeaderBar title="Nueva Venta" onBack={handleBack} />
+        <Loading message="Cargando turnos..." />
+      </View>
+    );
+  }
+
+  if (!categoria && !loadingTurnos) {
     return (
       <View style={styles.container}>
         <AppHeader />
         <SubHeaderBar title="Nueva Venta" onBack={handleBack} />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>No se encontró el turno</Text>
+          <Text style={styles.errorText}>No se especificó la categoría</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!loadingTurnos && categoria && turnos.length === 0) {
+    return (
+      <View style={styles.container}>
+        <AppHeader />
+        <SubHeaderBar title="Nueva Venta" onBack={handleBack} />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>No se encontraron turnos para esta categoría</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!loadingTurnos && turnos.length > 0 && turnosProximos.length === 0) {
+    return (
+      <View style={styles.container}>
+        <AppHeader />
+        <SubHeaderBar title="Nueva Venta" onBack={handleBack} />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            No hay turnos disponibles para esta fecha. Todos los turnos ya pasaron.
+          </Text>
         </View>
       </View>
     );
@@ -259,11 +325,19 @@ export const NuevaVentaScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={true}
       >
-        {turno && (
-          <Card style={styles.turnoCard}>
-            <Text style={styles.turnoLabel}>Turno:</Text>
-            <Text style={styles.turnoValue}>{formatearNombreTurno(turno)}</Text>
-          </Card>
+        {turnosProximos.length > 0 && turno && (
+          <TouchableOpacity activeOpacity={0.8} onPress={handleSeleccionarTurno}>
+            <Card style={styles.turnoCard}>
+              <View style={styles.turnoCardRow}>
+                <View>
+                  <Text style={styles.turnoLabel}>Turno</Text>
+                  <Text style={styles.turnoValue}>{formatearNombreTurno(turno)}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color={Colors.secondary} />
+              </View>
+              <Text style={styles.turnoHint}>Toca para cambiar de turno</Text>
+            </Card>
+          </TouchableOpacity>
         )}
 
         <View style={styles.fechaInputContainer}>
@@ -367,6 +441,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
   },
+  turnoCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   turnoLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -377,6 +456,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.secondary,
+  },
+  turnoHint: {
+    fontSize: 11,
+    color: Colors.secondary,
+    marginTop: 8,
+    opacity: 0.9,
   },
   fechaInputContainer: {
     marginBottom: 20,

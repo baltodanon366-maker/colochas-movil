@@ -7,6 +7,7 @@ import { Loading } from '../../../components/Loading';
 import { EmptyState } from '../../../components/EmptyState';
 import { ConfirmModal } from '../../../components/ConfirmModal';
 import { Colors } from '../../../constants/colors';
+import { useAuth } from '../../../hooks/useAuth';
 import { usersService } from '../../../services/users.service';
 import {
   UserCard,
@@ -16,65 +17,46 @@ import { useUsers } from '../hooks/useUsers';
 
 export const UserManagementScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { user: currentUser } = useAuth();
+  const currentUserId = currentUser?.id ? parseInt(currentUser.id, 10) : null;
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { users, roles, loading, reloadData } = useUsers(searchQuery);
 
-  const handleToggleUserStatus = (user: any) => {
-    setSelectedUser(user);
-    setShowConfirmModal(true);
+  const handleRequestDelete = (user: any) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
   };
 
-  const confirmToggleStatus = async () => {
-    if (!selectedUser) return;
-
-    const action = selectedUser.estado === 'activo' ? 'desactivar' : 'activar';
-    setIsTogglingStatus(true);
-
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
     try {
-      if (selectedUser.estado === 'activo') {
-        await usersService.deactivate(selectedUser.id);
+      const res = await usersService.delete(userToDelete.id);
+      if (res.succeeded) {
+        setShowDeleteModal(false);
+        setUserToDelete(null);
+        reloadData();
+        const msg = (res as any).data?.message || (res as any).message || 'Usuario eliminado correctamente.';
+        Alert.alert('Listo', msg);
       } else {
-        await usersService.activate(selectedUser.id);
+        Alert.alert('Error', (res as any).message || 'No se pudo eliminar el usuario.');
       }
-      
-      // Cerrar modal y recargar datos
-      setShowConfirmModal(false);
-      setSelectedUser(null);
-      reloadData();
     } catch (error: any) {
-      console.error('Error al cambiar estado del usuario:', error);
-      let errorMessage = `No se pudo ${action} el usuario`;
-      
-      if (error.succeeded === false && error.message) {
-        errorMessage = error.message;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Error', errorMessage);
+      const msg = error.response?.data?.message || error.message || 'No se pudo eliminar el usuario.';
+      Alert.alert('Error', msg);
     } finally {
-      setIsTogglingStatus(false);
+      setIsDeleting(false);
     }
   };
 
-  // Filtrar usuarios por estado (activos/inactivos)
-  // La búsqueda por nombre ya se hace en el backend a través de useUsers
-  const filteredUsers = users.filter((user) => {
-    // Si showInactive está activo, solo mostrar inactivos
-    if (showInactive && user.estado === 'activo') return false;
-    // Si showInactive está desactivado, solo mostrar activos
-    if (!showInactive && user.estado === 'inactivo') return false;
-    return true;
-  });
-
-  const availableRoles = roles.filter((r) => r.estado === 'activo');
+  const availableRoles = roles.filter(
+    (r) => r.estado === 'activo' && r.nombre.toLowerCase() !== 'supervisor'
+  );
 
   if (loading) {
     return <Loading message="Cargando usuarios..." />;
@@ -101,19 +83,17 @@ export const UserManagementScreen: React.FC = () => {
       <ScrollView style={styles.content}>
         <UserFilters
           searchQuery={searchQuery}
-          showInactive={showInactive}
           onSearchChange={setSearchQuery}
-          onToggleInactive={() => setShowInactive(!showInactive)}
         />
 
-        {filteredUsers.length === 0 ? (
+        {users.length === 0 ? (
           <EmptyState
             icon="people-outline"
             title="No hay usuarios"
-            message={showInactive ? 'No hay usuarios inactivos' : 'Crea tu primer usuario'}
+            message="Crea tu primer usuario"
           />
         ) : (
-          filteredUsers.map((user) => (
+          users.map((user) => (
             <UserCard
               key={user.id}
               user={user}
@@ -126,24 +106,25 @@ export const UserManagementScreen: React.FC = () => {
                   onReload: reloadData,
                 });
               }}
-              onToggleStatus={() => handleToggleUserStatus(user)}
+              onDelete={() => handleRequestDelete(user)}
+              canDelete={currentUserId !== null && user.id !== currentUserId}
             />
           ))
         )}
       </ScrollView>
 
       <ConfirmModal
-        visible={showConfirmModal}
-        title={selectedUser?.estado === 'activo' ? 'Desactivar Usuario' : 'Activar Usuario'}
-        message={`¿Estás seguro de que deseas ${selectedUser?.estado === 'activo' ? 'desactivar' : 'activar'} a ${selectedUser?.name}?`}
-        confirmText={selectedUser?.estado === 'activo' ? 'Desactivar' : 'Activar'}
+        visible={showDeleteModal}
+        title="Eliminar usuario"
+        message={`¿Eliminar definitivamente a ${userToDelete?.name}? Sus ventas ya no aparecerán en el historial. Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
         cancelText="Cancelar"
-        onConfirm={confirmToggleStatus}
+        onConfirm={confirmDelete}
         onCancel={() => {
-          setShowConfirmModal(false);
-          setSelectedUser(null);
+          setShowDeleteModal(false);
+          setUserToDelete(null);
         }}
-        loading={isTogglingStatus}
+        loading={isDeleting}
       />
     </View>
   );

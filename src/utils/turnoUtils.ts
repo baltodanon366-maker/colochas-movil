@@ -1,103 +1,97 @@
-import { Turno, CategoriaTurno } from '../types';
+import { Turno } from '../types';
+import { getNicaraguaDate, getNicaraguaDateTime } from './dateUtils';
+
+/** Hora de inicio de ventas (Nicaragua): 6:00 AM en minutos desde medianoche */
+const MINUTOS_INICIO_VENTAS = 6 * 60; // 360
+
+/** Minutos antes del cierre en que se bloquea la venta (por defecto 10) */
+const MINUTOS_BLOQUEO_DEFAULT = 10;
+
+function parseHoraToMinutes(hora: string): number {
+  const [h, m] = hora.trim().split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
 
 /**
- * Detecta el turno actual basado en la hora del sistema
+ * Detecta el turno actual (por defecto) en hora Nicaragua.
+ * Ventas desde las 6 AM. Turno actual = primer turno cuya ventana [hora, hora_cierre - tiempoBloqueo) contiene la hora actual.
  * @param turnos Lista de turnos activos de una categoría
- * @returns El turno actual o null si no hay turno activo en este momento
+ * @returns El turno actual o null (ej. antes de las 6 AM o después del último cierre)
  */
 export function detectarTurnoActual(turnos: Turno[]): Turno | null {
-  if (!turnos || turnos.length === 0) {
-    return null;
-  }
+  if (!turnos || turnos.length === 0) return null;
 
-  const ahora = new Date();
-  const horaActual = ahora.getHours();
-  const minutosActual = ahora.getMinutes();
+  const nowNic = getNicaraguaDateTime();
+  const minutosActuales = nowNic.getHours() * 60 + nowNic.getMinutes();
 
-  // Convertir hora actual a minutos desde medianoche para comparar
-  const minutosActuales = horaActual * 60 + minutosActual;
+  if (minutosActuales < MINUTOS_INICIO_VENTAS) return null;
 
-  // Ordenar turnos por hora de inicio
   const turnosOrdenados = turnos
-    .filter(t => t.hora && t.estado === 'activo')
-    .map(t => {
-      const [h, m] = (t.hora || '00:00').split(':').map(Number);
-      const minutosInicio = h * 60 + m;
-      
-      // Calcular minutos de cierre
-      let minutosCierre: number | null = null;
-      if (t.horaCierre) {
-        const [hc, mc] = t.horaCierre.split(':').map(Number);
-        minutosCierre = hc * 60 + mc;
-        // Si la hora de cierre es menor que la de inicio, asumimos que es del día siguiente
-        if (minutosCierre < minutosInicio) {
-          minutosCierre += 24 * 60;
-        }
-      }
-      
-      return {
-        turno: t,
-        minutosInicio,
-        minutosCierre,
-      };
+    .filter((t) => t.estado === 'activo' && t.hora && t.horaCierre)
+    .map((t) => {
+      const minutosInicio = parseHoraToMinutes(t.hora!);
+      const minutosCierre = parseHoraToMinutes(t.horaCierre!);
+      const bloqueo = t.tiempoBloqueo ?? MINUTOS_BLOQUEO_DEFAULT;
+      const limiteVenta = minutosCierre - bloqueo; // 10 min antes del cierre se bloquea
+      return { turno: t, minutosInicio, minutosCierre, limiteVenta };
     })
     .sort((a, b) => a.minutosInicio - b.minutosInicio);
 
-  // Buscar el turno actual (que esté activo en este momento)
-  for (let i = 0; i < turnosOrdenados.length; i++) {
-    const turnoData = turnosOrdenados[i];
+  const actual = turnosOrdenados.find(
+    (t) => minutosActuales >= t.minutosInicio && minutosActuales < t.limiteVenta
+  );
+  return actual ? actual.turno : null;
+}
 
-    // Si hay hora de cierre, verificar que estemos dentro del rango
-    if (turnoData.minutosCierre !== null) {
-      if (
-        minutosActuales >= turnoData.minutosInicio &&
-        minutosActuales < turnoData.minutosCierre
-      ) {
-        return turnoData.turno;
-      }
-    } else {
-      // Si no hay hora de cierre, usar el siguiente turno como límite
-      const siguienteTurno = turnosOrdenados[i + 1];
-      const limiteSuperior = siguienteTurno
-        ? siguienteTurno.minutosInicio
-        : 24 * 60; // Medianoche del día siguiente
+/**
+ * Indica si un turno ya no es vendible para la fecha dada (zona Nicaragua).
+ * - Fecha pasada: ya pasó.
+ * - Fecha futura: no pasó.
+ * - Hoy: no vendible si estamos antes de las 6 AM o si ya pasó el cierre menos tiempo de bloqueo (ej. 10 min antes de hora_cierre).
+ */
+export function turnoYaPasado(turno: Turno, fecha: string): boolean {
+  const today = getNicaraguaDate();
+  if (fecha < today) return true;
+  if (fecha > today) return false;
+  if (!turno.hora || !turno.horaCierre) return false;
 
-      if (
-        minutosActuales >= turnoData.minutosInicio &&
-        minutosActuales < limiteSuperior
-      ) {
-        return turnoData.turno;
-      }
-    }
+  const nowNic = getNicaraguaDateTime();
+  const minutosActuales = nowNic.getHours() * 60 + nowNic.getMinutes();
+
+  if (minutosActuales < MINUTOS_INICIO_VENTAS) return true; // Antes de las 6 AM ningún turno está disponible hoy
+  const minutosCierre = parseHoraToMinutes(turno.horaCierre);
+  const bloqueo = turno.tiempoBloqueo ?? MINUTOS_BLOQUEO_DEFAULT;
+  return minutosActuales >= minutosCierre - bloqueo;
+}
+
+/**
+ * Devuelve los turnos aún vendibles para la fecha dada, ordenados por hora de inicio (zona Nicaragua).
+ * Desde las 6 AM; cada turno se cierra 10 min (o tiempoBloqueo) antes de hora_cierre.
+ */
+export function getTurnosProximos(turnos: Turno[], fecha: string): Turno[] {
+  if (!turnos?.length) return [];
+
+  const today = getNicaraguaDate();
+  if (fecha === today) {
+    const nowNic = getNicaraguaDateTime();
+    const minutosActuales = nowNic.getHours() * 60 + nowNic.getMinutes();
+    if (minutosActuales < MINUTOS_INICIO_VENTAS) return [];
   }
 
-  // Si no se encontró ningún turno activo en el rango actual,
-  // buscar el turno más próximo que aún no haya comenzado
-  const turnoProximo = turnosOrdenados.find(t => t.minutosInicio > minutosActuales);
-  if (turnoProximo) {
-    return turnoProximo.turno;
-  }
-
-  // Si todos los turnos ya pasaron, retornar el último turno del día
-  // (útil para cuando es muy tarde y queremos seguir vendiendo en el último turno)
-  if (turnosOrdenados.length > 0) {
-    const ultimoTurno = turnosOrdenados[turnosOrdenados.length - 1];
-    // Solo retornar el último turno si ya pasó su hora de inicio
-    if (minutosActuales >= ultimoTurno.minutosInicio) {
-      return ultimoTurno.turno;
-    }
-  }
-
-  return null;
+  return turnos
+    .filter((t) => t.estado === 'activo' && t.hora && t.horaCierre && !turnoYaPasado(t, fecha))
+    .map((t) => ({
+      turno: t,
+      minutosInicio: parseHoraToMinutes(t.hora!),
+    }))
+    .sort((a, b) => a.minutosInicio - b.minutosInicio)
+    .map((x) => x.turno);
 }
 
 /**
  * Formatea el nombre del turno para mostrar
- * @param turno El turno a formatear
- * @returns String formateado como "Turno 1 PM - La Tica"
  */
 export function formatearNombreTurno(turno: Turno): string {
   const categoriaNombre = turno.categoria === 'diaria' ? 'La Diaria' : 'La Tica';
   return `${turno.nombre} - ${categoriaNombre}`;
 }
-

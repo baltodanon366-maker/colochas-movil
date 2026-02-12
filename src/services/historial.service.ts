@@ -36,7 +36,7 @@ export interface EstadisticaNumero {
   turnosDiferentes: number;
   usuariosDiferentes: number;
   turnos: Array<{ id: number; nombre: string; categoria: string }>;
-  usuarios: Array<{ id: number; name: string; email: string }>;
+  usuarios: Array<{ id: number; name: string; telefono: string }>;
   categorias: string[];
   vendido: boolean;
 }

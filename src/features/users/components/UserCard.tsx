@@ -9,10 +9,11 @@ import { format } from 'date-fns';
 interface UserCardProps {
   user: User;
   onEdit: () => void;
-  onToggleStatus: () => void;
+  onDelete?: () => void;
+  canDelete?: boolean;
 }
 
-export const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onToggleStatus }) => {
+export const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete, canDelete = true }) => {
   const rolesText = user.roles && user.roles.length > 0 
     ? user.roles.map(r => r.nombre).join(', ')
     : 'Sin roles asignados';
@@ -23,16 +24,8 @@ export const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onToggleStatus
         <View style={styles.info}>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{user.name}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                user.estado === 'activo' ? styles.statusActive : styles.statusInactive,
-              ]}
-            >
-              <Text style={styles.statusText}>{user.estado}</Text>
-            </View>
           </View>
-          <Text style={styles.email}>{user.email}</Text>
+          <Text style={styles.telefono}>{user.telefono}</Text>
           <Text style={styles.roles}>Roles: {rolesText}</Text>
           {user.lastLogin && (
             <Text style={styles.lastLogin}>
@@ -44,13 +37,11 @@ export const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onToggleStatus
           <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
             <Ionicons name="create-outline" size={20} color={Colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onToggleStatus} style={styles.actionButton}>
-            <Ionicons
-              name={user.estado === 'activo' ? 'ban-outline' : 'checkmark-circle-outline'}
-              size={20}
-              color={user.estado === 'activo' ? Colors.danger : Colors.success}
-            />
-          </TouchableOpacity>
+          {onDelete && canDelete && (
+            <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
+              <Ionicons name="trash-outline" size={20} color={Colors.danger} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Card>
@@ -80,24 +71,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text.primary,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusActive: {
-    backgroundColor: Colors.successLight,
-  },
-  statusInactive: {
-    backgroundColor: Colors.dangerLight,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    textTransform: 'capitalize',
-  },
-  email: {
+  telefono: {
     fontSize: 14,
     color: Colors.text.secondary,
     marginBottom: 4,

@@ -68,20 +68,14 @@ export const PerfilScreen: React.FC = () => {
           <Ionicons name="person-circle" size={80} color="#007AFF" />
         </View>
         <Text style={styles.name}>{user?.name || 'Usuario'}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
+        <Text style={styles.telefono}>{user?.telefono}</Text>
       </View>
 
       <Card style={styles.infoCard}>
         <View style={styles.infoRow}>
-          <Ionicons name="mail-outline" size={20} color="#666" />
-          <Text style={styles.infoText}>{user?.email}</Text>
+          <Ionicons name="call-outline" size={20} color="#666" />
+          <Text style={styles.infoText}>{user?.telefono}</Text>
         </View>
-        {(user as any)?.username && (
-          <View style={styles.infoRow}>
-            <Ionicons name="at-outline" size={20} color="#666" />
-            <Text style={styles.infoText}>{(user as any).username}</Text>
-          </View>
-        )}
         {user?.roles && user.roles.length > 0 && (
           <View style={styles.rolesContainer}>
             <Text style={styles.rolesLabel}>Roles:</Text>
@@ -96,9 +90,9 @@ export const PerfilScreen: React.FC = () => {
         )}
       </Card>
 
-      <Card style={styles.menuCard}>
-        {isAdmin && (
-          <TouchableOpacity 
+      {isAdmin && (
+        <Card style={styles.menuCard}>
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('UserManagement')}
           >
@@ -106,26 +100,8 @@ export const PerfilScreen: React.FC = () => {
             <Text style={styles.menuText}>Gestión de Usuarios</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
-        )}
-        {/* Ocultar Configuración para vendedores, solo mostrar para admin */}
-        {isAdmin && (
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="settings-outline" size={24} color="#333" />
-            <Text style={styles.menuText}>Configuración</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="help-circle-outline" size={24} color="#333" />
-          <Text style={styles.menuText}>Ayuda</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="information-circle-outline" size={24} color="#333" />
-          <Text style={styles.menuText}>Acerca de</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
-      </Card>
+        </Card>
+      )}
 
       <Button
         title="Cerrar Sesión"
@@ -193,7 +169,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  email: {
+  telefono: {
     fontSize: 16,
     color: '#666',
   },
