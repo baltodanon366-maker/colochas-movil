@@ -1,6 +1,6 @@
 import { Venta } from '../types';
 import { Alert, Platform, Share } from 'react-native';
-import { formatDateString } from '../utils/dateUtils';
+import { formatDateString, formatTimeString } from '../utils/dateUtils';
 import * as IntentLauncher from 'expo-intent-launcher';
 
 /** Package de la app "Thermal Printer" en Android. Si usas otra app, cámbialo aquí. */
@@ -56,33 +56,39 @@ class PrinterService {
   }
 
   /**
-   * Generar texto del boucher para impresión (resumido para ahorrar material)
-   * Solo: nombre, fecha, código, números con monto individual, total.
+   * Generar texto del boucher para impresión
+   * Formato: $ La Colocha $, fecha, no. venta, hora, usuario, turno, detalles, total, pie.
    */
   private generateBoucherText(venta: Venta, config?: BoucherConfig): string {
-    const empresa = config?.nombreEmpresa || 'La Chelita';
+    const empresa = config?.nombreEmpresa || 'La Colocha';
     const fecha = formatDateString(venta.fecha || (venta.fechaHora ? venta.fechaHora.split('T')[0] : null) || new Date().toISOString().split('T')[0]);
+    const hora = formatTimeString(venta.fechaHora || venta.createdAt);
+    const usuario = (venta.usuario as any)?.nombre || venta.usuario?.name || venta.usuario?.username || '—';
+    const turno = venta.turno?.nombre ?? `Turno ${venta.turnoId}`;
     const detalles = venta.detallesVenta || venta.detalles || [];
     const total = Number(venta.total).toFixed(2);
 
-    const WIDTH = 48;
-    const SEPARATOR = '-'.repeat(WIDTH);
+    const SEPARATOR = '====================';
 
     let boucherText = '';
-    boucherText += `${empresa}\n`;
-    boucherText += `${SEPARATOR}\n`;
-    boucherText += `${fecha}   ${venta.numeroBoucher}\n`;
+    boucherText += `$ ${empresa} $\n\n`;
+    boucherText += `${fecha}     ${venta.numeroBoucher}\n`;
+    boucherText += `${hora}          ${usuario}\n`;
+    boucherText += `${turno}\n`;
     boucherText += `${SEPARATOR}\n`;
 
     for (const detalle of detalles) {
       const numero = detalle.numero.toString().padStart(2, '0');
       const monto = `C$${Number(detalle.monto).toFixed(2)}`;
-      boucherText += `${numero}   ${monto}\n`;
+      boucherText += `[${numero}]   ${monto}\n`;
     }
 
-    boucherText += `${SEPARATOR}\n`;
-    boucherText += `TOTAL   C$${total}\n`;
-    boucherText += '\n\n';
+    boucherText += `${SEPARATOR}\n\n`;
+    boucherText += `TOTAL = C$${total}\n`;
+    boucherText += `${SEPARATOR}\n\n`;
+    boucherText += `Revise su boleto\n`;
+    boucherText += `Sin boleto no hay premio\n`;
+    boucherText += `No se aceptan reclamos después del sorteo\n`;
 
     return boucherText;
   }

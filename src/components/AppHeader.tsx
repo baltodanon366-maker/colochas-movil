@@ -68,8 +68,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ rightIcon, onRightPress })
 
 const styles = StyleSheet.create({
   gradient: {
-    paddingTop: 50,
-    paddingBottom: 16,
+    paddingTop: 20,
+    paddingBottom: 10,
     paddingHorizontal: 16,
     shadowColor: Colors.shadow.color,
     shadowOffset: {

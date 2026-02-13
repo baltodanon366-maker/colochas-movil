@@ -17,7 +17,7 @@ import { Button } from '../../../components/Button';
 import { Colors } from '../../../constants/colors';
 import { Venta } from '../../../types';
 import { printerService } from '../../../services/printer.service';
-import { formatDateString } from '../../../utils/dateUtils';
+import { formatDateString, formatTimeString } from '../../../utils/dateUtils';
 
 export const BoucherPreviewScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -25,6 +25,7 @@ export const BoucherPreviewScreen: React.FC = () => {
   const { venta } = route.params as { venta: Venta } || {};
 
   const [printing, setPrinting] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const navigateToNuevaVenta = () => {
     // Regresar al formulario de nueva venta con los mismos parámetros del turno
@@ -70,14 +71,26 @@ export const BoucherPreviewScreen: React.FC = () => {
     setPrinting(true);
     try {
       await printerService.printBoucher(venta, {
-        nombreEmpresa: 'La Chelita',
+        nombreEmpresa: 'La Colocha',
       });
-      // Navegar automáticamente al formulario de nueva venta después de imprimir
       navigateToNuevaVenta();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo procesar la impresión');
     } finally {
       setPrinting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      await printerService.shareBoucher(venta, {
+        nombreEmpresa: 'La Colocha',
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo compartir');
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -99,44 +112,50 @@ export const BoucherPreviewScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={true}
       >
-        {/* Boucher resumido: nombre, fecha, código, números, total */}
+        {/* Boucher: $ La Colocha $, fecha, hora, usuario, turno, detalles, total, pie */}
         <View style={styles.boucherPaper}>
-          <Text style={styles.empresa}>La Chelita</Text>
-          <View style={styles.separator} />
+          <Text style={styles.empresa}>$ La Colocha $</Text>
           <View style={styles.filaCodigo}>
             <Text style={styles.fecha}>
               {formatDateString(venta.fecha || (venta.fechaHora ? venta.fechaHora.split('T')[0] : null) || new Date().toISOString().split('T')[0])}
             </Text>
             <Text style={styles.codigo}>{venta.numeroBoucher}</Text>
           </View>
+          <View style={styles.filaCodigo}>
+            <Text style={styles.fecha}>{formatTimeString(venta.fechaHora || venta.createdAt)}</Text>
+            <Text style={styles.codigo}>{(venta.usuario as any)?.nombre || venta.usuario?.name || venta.usuario?.username || '—'}</Text>
+          </View>
+          <Text style={styles.turnoLine}>{venta.turno?.nombre ?? `Turno ${venta.turnoId}`}</Text>
           <View style={styles.separator} />
 
           {(venta.detallesVenta || venta.detalles) && (venta.detallesVenta || venta.detalles)!.length > 0 ? (
             <>
               {(venta.detallesVenta || venta.detalles)!.map((detalle, index) => (
                 <View key={index} style={styles.filaNumero}>
-                  <Text style={styles.detalleNumero}>{detalle.numero.toString().padStart(2, '0')}</Text>
+                  <Text style={styles.detalleNumero}>[{detalle.numero.toString().padStart(2, '0')}]</Text>
                   <Text style={styles.detalleMonto}>C${Number(detalle.monto).toFixed(2)}</Text>
                 </View>
               ))}
               <View style={styles.separator} />
               <View style={styles.filaTotal}>
-                <Text style={styles.totalLabel}>TOTAL</Text>
-                <Text style={styles.totalValue}>C${Number(venta.total).toFixed(2)}</Text>
+                <Text style={styles.totalLabel}>TOTAL = C${Number(venta.total).toFixed(2)}</Text>
               </View>
+              <View style={styles.separator} />
+              <Text style={styles.pie}>Revise su boleto</Text>
+              <Text style={styles.pie}>Sin boleto no hay premio</Text>
+              <Text style={styles.pie}>No se aceptan reclamos después del sorteo</Text>
             </>
           ) : (
             <Text style={styles.noDetalles}>No hay detalles</Text>
           )}
         </View>
 
-        {/* Botones de Acción */}
         <View style={styles.actions}>
           <Button
-            title={printing ? 'Imprimiendo...' : 'Imprimir / Compartir'}
+            title={printing ? 'Imprimiendo...' : 'Imprimir'}
             onPress={handlePrint}
             loading={printing}
-            disabled={printing}
+            disabled={printing || sharing}
             icon={
               printing ? (
                 <ActivityIndicator size="small" color={Colors.text.inverse} />
@@ -145,6 +164,14 @@ export const BoucherPreviewScreen: React.FC = () => {
               )
             }
             style={styles.printButton}
+          />
+          <Button
+            title={sharing ? 'Compartiendo...' : 'Compartir'}
+            onPress={handleShare}
+            loading={sharing}
+            disabled={printing || sharing}
+            icon={<Ionicons name="share-outline" size={20} color={Colors.text.inverse} />}
+            style={styles.shareButton}
           />
         </View>
       </ScrollView>
@@ -230,6 +257,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.success,
+  },
+  turnoLine: {
+    fontSize: 13,
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  pie: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+  shareButton: {
+    width: '100%',
+    marginTop: 10,
   },
   noDetalles: {
     fontSize: 14,

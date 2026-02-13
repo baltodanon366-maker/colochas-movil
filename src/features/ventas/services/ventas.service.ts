@@ -23,11 +23,13 @@ class VentasService {
   }
 
   async create(data: CreateVentaDto): Promise<Venta> {
-    const response = await apiService.post<Venta>(API_ENDPOINTS.VENTAS.CREATE, data);
-    if (!response.data) {
-      throw new Error(response.message || 'Error al crear venta');
+    const response = await apiService.post<any>(API_ENDPOINTS.VENTAS.CREATE, data);
+    // Backend puede devolver la venta directa o { data: venta }
+    const venta = response?.data ?? response;
+    if (!venta?.id) {
+      throw new Error(response?.message || 'Error al crear venta');
     }
-    return response.data;
+    return venta as Venta;
   }
 }
 

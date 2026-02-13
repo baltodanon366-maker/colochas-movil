@@ -22,7 +22,7 @@ export const RestriccionesList: React.FC<RestriccionesListProps> = ({
   isAdmin,
   onReload,
 }) => {
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (restriccion: RestriccionNumero) => {
     Alert.alert(
       'Eliminar Restricción',
       '¿Estás seguro de que deseas eliminar esta restricción? El número quedará disponible nuevamente.',
@@ -33,7 +33,18 @@ export const RestriccionesList: React.FC<RestriccionesListProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              await restriccionesService.delete(id);
+              if (restriccion.id != null) {
+                await restriccionesService.delete(restriccion.id);
+              } else if (turnoId != null && fecha && restriccion.numero != null) {
+                await restriccionesService.deleteByNumero(
+                  turnoId,
+                  restriccion.numero,
+                  fecha
+                );
+              } else {
+                Alert.alert('Error', 'No se puede eliminar: faltan turno, fecha o número');
+                return;
+              }
               Alert.alert('Éxito', 'Restricción eliminada correctamente');
               onReload();
             } catch (error: any) {
@@ -61,9 +72,9 @@ export const RestriccionesList: React.FC<RestriccionesListProps> = ({
       <View style={styles.grid}>
         {restricciones.map((restriccion) => (
           <RestriccionCard
-            key={restriccion.id}
+            key={restriccion.id ?? `${restriccion.turnoId}-${restriccion.numero}-${restriccion.fecha}`}
             restriccion={restriccion}
-            onDelete={() => handleDelete(restriccion.id)}
+            onDelete={() => handleDelete(restriccion)}
           />
         ))}
       </View>

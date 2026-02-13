@@ -29,14 +29,12 @@ export const RestriccionFormModal: React.FC<RestriccionFormModalProps> = ({
 }) => {
   const [tipoRestriccion, setTipoRestriccion] = useState<TipoRestriccion>('completo');
   const [limiteMonto, setLimiteMonto] = useState('');
-  const [limiteCantidad, setLimiteCantidad] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setTipoRestriccion('completo');
       setLimiteMonto('');
-      setLimiteCantidad('');
     }
   }, [visible]);
 
@@ -59,14 +57,6 @@ export const RestriccionFormModal: React.FC<RestriccionFormModalProps> = ({
       }
     }
 
-    if (tipoRestriccion === 'cantidad') {
-      const cantidad = parseInt(limiteCantidad);
-      if (!limiteCantidad || isNaN(cantidad) || cantidad <= 0) {
-        Alert.alert('Error', 'Debe especificar un límite de cantidad mayor a 0');
-        return;
-      }
-    }
-
     setCreating(true);
     try {
       const payload: any = {
@@ -78,8 +68,6 @@ export const RestriccionFormModal: React.FC<RestriccionFormModalProps> = ({
 
       if (tipoRestriccion === 'monto') {
         payload.limiteMonto = parseFloat(limiteMonto);
-      } else if (tipoRestriccion === 'cantidad') {
-        payload.limiteCantidad = parseInt(limiteCantidad);
       }
 
       await restriccionesService.createMultiple(payload);
@@ -137,22 +125,6 @@ export const RestriccionFormModal: React.FC<RestriccionFormModalProps> = ({
               Por Monto
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tipoOption,
-              tipoRestriccion === 'cantidad' && styles.tipoOptionActive,
-            ]}
-            onPress={() => setTipoRestriccion('cantidad')}
-          >
-            <Text
-              style={[
-                styles.tipoOptionText,
-                tipoRestriccion === 'cantidad' && styles.tipoOptionTextActive,
-              ]}
-            >
-              Por Cantidad
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {tipoRestriccion === 'monto' && (
@@ -162,16 +134,6 @@ export const RestriccionFormModal: React.FC<RestriccionFormModalProps> = ({
             onChangeText={setLimiteMonto}
             placeholder="Ej: 50.00"
             keyboardType="decimal-pad"
-          />
-        )}
-
-        {tipoRestriccion === 'cantidad' && (
-          <Input
-            label="Límite de Cantidad"
-            value={limiteCantidad}
-            onChangeText={setLimiteCantidad}
-            placeholder="Ej: 5"
-            keyboardType="numeric"
           />
         )}
 

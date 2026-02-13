@@ -26,7 +26,7 @@ export const NumberGrid: React.FC<NumberGridProps> = ({
   const isRestricted = (num: number) => restrictedNumbers.includes(num);
   const hasValue = (num: number) => numberValues[num] !== undefined;
 
-  const renderNumber = (num: number) => {
+  const renderNumber = (num: number, isLastInRow: boolean) => {
     const selected = isSelected(num);
     const restricted = isRestricted(num);
     const value = numberValues[num];
@@ -39,6 +39,7 @@ export const NumberGrid: React.FC<NumberGridProps> = ({
           restricted && styles.numberCellRestricted,
           selected && styles.numberCellSelected,
           hasValue(num) && styles.numberCellWithValue,
+          isLastInRow && styles.numberCellLastInRow,
         ]}
         onPress={() => onNumberPress?.(num)}
         activeOpacity={0.7}
@@ -73,7 +74,9 @@ export const NumberGrid: React.FC<NumberGridProps> = ({
       <View style={styles.grid}>
         {rows.map((row, rowIndex) => (
           <View key={rowIndex} style={styles.row}>
-            {row.map((num) => renderNumber(num))}
+            {row.map((num, cellIndex) =>
+              renderNumber(num, cellIndex === row.length - 1)
+            )}
           </View>
         ))}
       </View>
@@ -86,21 +89,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   grid: {
-    gap: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border.light,
+    borderRadius: 4,
   },
   row: {
     flexDirection: 'row',
-    gap: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border.light,
   },
   numberCell: {
     flex: 1,
     aspectRatio: 1,
     backgroundColor: Colors.background.secondary,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: Colors.border.light,
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 40,
+  },
+  numberCellLastInRow: {
+    borderRightWidth: 0,
   },
   numberCellSelected: {
     backgroundColor: Colors.primary,

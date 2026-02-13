@@ -13,7 +13,6 @@ import { historialService } from '../../../services/historial.service';
 import { turnosService } from '../../../services/turnos.service';
 import { Turno, CategoriaTurno } from '../../../types';
 import { FiltrosTurno } from '../components/FiltrosTurno';
-import { format } from 'date-fns';
 import { DatePickerModal } from '../components/DatePickerModal';
 import { Ionicons } from '@expo/vector-icons';
 import { getNicaraguaDate, formatDateString } from '../../../utils/dateUtils';
@@ -40,7 +39,7 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
   } | null>(null);
   const [fecha, setFecha] = useState<string>(getNicaraguaDate());
   const [turnos, setTurnos] = useState<Turno[]>([]);
-  const [filtroCategoria, setFiltroCategoria] = useState<CategoriaTurno | null>(null);
+  const [filtroCategoria, setFiltroCategoria] = useState<CategoriaTurno | null>('diaria');
   const [filtroTurnoId, setFiltroTurnoId] = useState<number | null>(null);
   const [totalMonto, setTotalMonto] = useState<number>(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -49,11 +48,20 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
     loadTurnos();
   }, []);
 
+  // Al cargar turnos: si hay categoría pero no turno seleccionado, elegir el primero
+  useEffect(() => {
+    if (turnos.length === 0 || !filtroCategoria || filtroTurnoId !== null) return;
+    const turnosDeCategoria = turnos
+      .filter((t) => t.categoria === filtroCategoria)
+      .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+    const primerTurno = turnosDeCategoria[0];
+    if (primerTurno) setFiltroTurnoId(primerTurno.id);
+  }, [turnos, filtroCategoria, filtroTurnoId]);
+
   useEffect(() => {
     if (filtroTurnoId) {
       loadReporte();
     } else {
-      // Si no hay turno seleccionado, limpiar datos
       setNumeros([]);
       setTurno(null);
       setTotalMonto(0);
@@ -94,7 +102,15 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
 
   const handleFiltroCategoria = (categoria: CategoriaTurno | null) => {
     setFiltroCategoria(categoria);
-    setFiltroTurnoId(null);
+    if (!categoria) {
+      setFiltroTurnoId(null);
+      return;
+    }
+    const turnosDeCategoria = turnos
+      .filter((t) => t.categoria === categoria)
+      .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+    const primerTurno = turnosDeCategoria[0];
+    setFiltroTurnoId(primerTurno ? primerTurno.id : null);
   };
 
   const handleFechaSeleccionada = (fechaSeleccionada: Date) => {
@@ -107,20 +123,14 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
     setShowDatePicker(false);
   };
 
-  // Generar array de números 00-99 si no vienen del backend
-  const numerosCompletos = numeros.length > 0 
-    ? numeros 
+  // Array 00-99 para lista compacta
+  const numerosCompletos = numeros.length > 0
+    ? numeros
     : Array.from({ length: 100 }, (_, i) => ({
         numero: i,
         totalMonto: 0,
         vendido: false,
       }));
-
-  // Organizar números en 5 columnas (20 filas)
-  const numerosPorColumna: ReporteCierreNumero[][] = [];
-  for (let i = 0; i < 5; i++) {
-    numerosPorColumna[i] = numerosCompletos.filter((_, index) => index % 5 === i);
-  }
 
   return (
     <View style={styles.container}>
@@ -139,6 +149,8 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
             filtroTurnoId={filtroTurnoId}
             onSelectCategoria={handleFiltroCategoria}
             onSelectTurno={setFiltroTurnoId}
+            hideTodosCategoria
+            hideTodosTurnos
           />
 
           {/* Selector de Fecha */}
@@ -157,19 +169,11 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
           </View>
         </View>
 
-        {/* Información del Turno y Total */}
+        {/* Solo Total (estilo anterior) */}
         {turno && (
-          <View style={styles.infoContainer}>
-            <View style={styles.turnoInfo}>
-              <Text style={styles.turnoLabel}>Turno:</Text>
-              <Text style={styles.turnoName}>{turno.nombre}</Text>
-            </View>
-            <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalAmount}>
-                {totalMonto.toFixed(1)}
-              </Text>
-            </View>
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalAmount}>C${totalMonto.toFixed(2)}</Text>
           </View>
         )}
 
@@ -179,37 +183,42 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
           <>
             {filtroTurnoId ? (
               <>
-                {/* Grid de Números */}
-                <View style={styles.gridContainer}>
-                  {numerosPorColumna.map((columna, colIndex) => (
-                    <View key={colIndex} style={styles.column}>
-                      {columna.map((item) => (
-                        <View
-                          key={item.numero}
-                          style={[
-                            styles.numeroCell,
-                            item.vendido ? styles.numeroVendido : styles.numeroNoVendido,
-                          ]}
-                        >
-                          <Text
+                {/* Lista de números: 7 por fila; monto vendido debajo del número */}
+                <View style={styles.numerosCompactContainer}>
+                  {Array.from({ length: Math.ceil(numerosCompletos.length / 7) }, (_, rowIndex) => {
+                    const rowItems = numerosCompletos.slice(rowIndex * 7, rowIndex * 7 + 7);
+                    return (
+                    <View key={rowIndex} style={styles.numerosRow}>
+                      {rowItems.map((item, cellIndex) => {
+                        const isLastInRow = cellIndex === rowItems.length - 1;
+                        return (
+                          <View
+                            key={item.numero}
                             style={[
-                              styles.numeroText,
-                              item.vendido ? styles.numeroTextVendido : styles.numeroTextNoVendido,
+                              styles.numeroCell,
+                              item.vendido && styles.numeroCellVendido,
+                              isLastInRow && styles.numeroCellLastInRow,
                             ]}
                           >
-                            {item.numero.toString().padStart(2, '0')}
-                          </Text>
-                          {item.vendido && (
                             <Text
-                              style={styles.montoText}
+                              style={[
+                                styles.numeroCompactText,
+                                item.vendido ? styles.numeroCompactVendido : styles.numeroCompactNoVendido,
+                              ]}
                             >
-                              {item.totalMonto.toFixed(1)}
+                              {item.numero.toString().padStart(2, '0')}
                             </Text>
-                          )}
-                        </View>
-                      ))}
+                            {item.vendido && (
+                              <Text style={styles.numeroMontoText}>
+                                {item.totalMonto.toFixed(0)}
+                              </Text>
+                            )}
+                          </View>
+                        );
+                      })}
                     </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </>
             ) : (
@@ -275,37 +284,15 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontWeight: '500',
   },
-  infoContainer: {
-    backgroundColor: Colors.background.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  turnoInfo: {
-    flex: 1,
-  },
-  turnoLabel: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-    marginBottom: 4,
-  },
-  turnoName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-  },
   totalContainer: {
     backgroundColor: Colors.warningLight,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    alignSelf: 'flex-start',
     minWidth: 120,
+    marginBottom: 16,
   },
   totalLabel: {
     fontSize: 12,
@@ -317,47 +304,49 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text.primary,
   },
-  gridContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  numerosCompactContainer: {
     marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border.light,
+    borderRadius: 4,
   },
-  column: {
-    flex: 1,
-    gap: 6,
+  numerosRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    marginBottom: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border.light,
   },
   numeroCell: {
-    aspectRatio: 1,
-    borderRadius: 6,
-    padding: 6,
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    minHeight: 50,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: Colors.border.light,
   },
-  numeroVendido: {
+  numeroCellVendido: {
     backgroundColor: Colors.dangerLight,
-    borderColor: Colors.danger,
   },
-  numeroNoVendido: {
-    backgroundColor: Colors.background.card,
-    borderColor: Colors.border.medium,
+  numeroCellLastInRow: {
+    borderRightWidth: 0,
   },
-  numeroText: {
+  numeroCompactText: {
     fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 2,
+    fontWeight: '600',
   },
-  numeroTextVendido: {
+  numeroCompactVendido: {
     color: Colors.danger,
   },
-  numeroTextNoVendido: {
+  numeroCompactNoVendido: {
     color: Colors.text.primary,
   },
-  montoText: {
-    fontSize: 10,
-    color: Colors.text.primary,
+  numeroMontoText: {
+    fontSize: 11,
     fontWeight: '600',
+    color: Colors.danger,
+    marginTop: 2,
   },
   emptyContainer: {
     alignItems: 'center',

@@ -89,6 +89,7 @@ class RestriccionesService {
       turnoId: turnoId.toString(),
       numeros: numeros.join(','),
       fecha,
+      _t: Date.now().toString(), // cache-busting para evitar 304 con datos obsoletos
     });
     
     const response = await apiService.get<VerificarMultiplesResponse>(
@@ -105,18 +106,20 @@ class RestriccionesService {
   }
 
   async delete(id: number): Promise<void> {
-    const response = await apiService.delete(API_ENDPOINTS.RESTRICCIONES.BY_ID(id));
-    if (!response.succeeded) {
+    const response = await apiService.delete<{ succeeded?: boolean; message?: string }>(
+      API_ENDPOINTS.RESTRICCIONES.BY_ID(id)
+    );
+    if (response.succeeded === false) {
       throw new Error(response.message || 'Error al eliminar restricción');
     }
   }
 
   async deleteByNumero(turnoId: number, numero: number, fecha: string): Promise<void> {
     const params = new URLSearchParams({ fecha });
-    const response = await apiService.delete(
+    const response = await apiService.delete<{ succeeded?: boolean; message?: string }>(
       `${API_ENDPOINTS.RESTRICCIONES.BY_NUMERO(turnoId, numero)}?${params.toString()}`
     );
-    if (!response.succeeded) {
+    if (response.succeeded === false) {
       throw new Error(response.message || 'Error al eliminar restricción');
     }
   }

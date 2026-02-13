@@ -25,7 +25,7 @@ import { useHistorial } from '../hooks/useHistorial';
 import { FiltroFecha } from '../components/FiltrosFecha';
 import { CategoriaTurno } from '../../../types';
 
-type HistorialView = 'selector' | 'reporte' | 'reporteCierre' | 'analisis';
+type HistorialView = 'selector' | 'reporte' | 'reporteCierre';
 
 export const HistorialScreen: React.FC = () => {
   const { user } = useAuth();
@@ -127,17 +127,8 @@ export const HistorialScreen: React.FC = () => {
       <View style={styles.container}>
         <AppHeader />
         <HistorialSelector
-          isAdmin={!!isAdmin}
-          onSelectReporte={() => {
-            setView('reporte');
-          }}
-          onSelectReporteCierre={() => {
-            setView('reporteCierre');
-          }}
-          onSelectAnalisis={() => {
-            setView('analisis');
-            navigation.navigate('AnalisisNumeros');
-          }}
+          onSelectReporte={() => setView('reporte')}
+          onSelectReporteCierre={() => setView('reporteCierre')}
         />
       </View>
     );

@@ -6,15 +6,11 @@ import { Colors } from '../../../constants/colors';
 interface HistorialSelectorProps {
   onSelectReporte: () => void;
   onSelectReporteCierre: () => void;
-  onSelectAnalisis: () => void;
-  isAdmin?: boolean;
 }
 
 export const HistorialSelector: React.FC<HistorialSelectorProps> = ({
   onSelectReporte,
   onSelectReporteCierre,
-  onSelectAnalisis,
-  isAdmin = false,
 }) => {
   return (
     <ScrollView style={styles.content} contentContainerStyle={styles.selectorContainer}>
@@ -34,37 +30,19 @@ export const HistorialSelector: React.FC<HistorialSelectorProps> = ({
           </Text>
         </TouchableOpacity>
 
-        {isAdmin && (
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={onSelectReporteCierre}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconContainer, { backgroundColor: Colors.secondary }]}>
-              <Ionicons name="document-text" size={50} color={Colors.text.primary} />
-            </View>
-            <Text style={styles.optionTitle}>Reporte de Cierre</Text>
-            <Text style={styles.optionDescription}>
-              Ver reporte de los 100 números por turno con totales vendidos
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {isAdmin && (
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={onSelectAnalisis}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconContainer, { backgroundColor: Colors.primaryLight }]}>
-              <Ionicons name="analytics" size={50} color={Colors.secondary} />
-            </View>
-            <Text style={styles.optionTitle}>Análisis de Números</Text>
-            <Text style={styles.optionDescription}>
-              Ver estadísticas detalladas por número, turnos y categorías
-            </Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.optionCard}
+          onPress={onSelectReporteCierre}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: Colors.secondary }]}>
+            <Ionicons name="document-text" size={50} color={Colors.text.primary} />
+          </View>
+          <Text style={styles.optionTitle}>Reporte de Cierre</Text>
+          <Text style={styles.optionDescription}>
+            Ver reporte de los 100 números por turno con totales vendidos
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

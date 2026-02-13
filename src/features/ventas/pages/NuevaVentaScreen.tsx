@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity, Dimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../../components/AppHeader';
@@ -12,7 +12,7 @@ import { NumericKeyboard } from '../../../components/NumericKeyboard';
 import { RestriccionesCard } from '../components/RestriccionesCard';
 import { DetallesList } from '../components/DetallesList';
 import { Colors } from '../../../constants/colors';
-import { Turno, DetalleVenta, Venta } from '../../../types';
+import { Turno, DetalleVenta, Venta, RestriccionNumero } from '../../../types';
 import { formatearNombreTurno, getTurnosProximos } from '../../../utils/turnoUtils';
 import { restriccionesService } from '../../restricciones/services/restricciones.service';
 import { ventasService } from '../services/ventas.service';
@@ -80,11 +80,11 @@ export const NuevaVentaScreen: React.FC = () => {
   const [detalles, setDetalles] = useState<DetalleVenta[]>([]);
   const [numeroInput, setNumeroInput] = useState('');
   const [montoInput, setMontoInput] = useState('');
-  const [observaciones, setObservaciones] = useState('');
   const [inputFocus, setInputFocus] = useState<'numero' | 'monto' | null>(null);
-  const [numerosRestringidos, setNumerosRestringidos] = useState<number[]>([]);
+  const [restricciones, setRestricciones] = useState<RestriccionNumero[]>([]);
   const [loadingRestricciones, setLoadingRestricciones] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [errorMontoRestriccion, setErrorMontoRestriccion] = useState<string | null>(null);
   const turnoAnteriorRef = useRef<Turno | null>(null);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export const NuevaVentaScreen: React.FC = () => {
 
   const loadRestricciones = async (mostrarLoading: boolean = false) => {
     if (!turno) {
-      setNumerosRestringidos([]);
+      setRestricciones([]);
       return;
     }
 
@@ -109,19 +109,17 @@ export const NuevaVentaScreen: React.FC = () => {
 
     try {
       const restriccionesData = await restriccionesService.getAll(turno.id, fecha);
-      const numerosRestringidosList = restriccionesData
-        .filter(r => r.estaRestringido)
-        .map(r => r.numero);
-      setNumerosRestringidos(numerosRestringidosList);
+      setRestricciones(restriccionesData || []);
     } catch (error) {
       console.error('Error al cargar restricciones:', error);
-      setNumerosRestringidos([]);
+      setRestricciones([]);
     } finally {
       setLoadingRestricciones(false);
     }
   };
 
   const handleNumeroChange = (text: string) => {
+    setErrorMontoRestriccion(null);
     const digits = text.replace(/\D/g, '').slice(0, 2);
     const num = parseInt(digits, 10);
     if (digits.length <= 2 && (digits === '' || num <= 99)) {
@@ -130,17 +128,9 @@ export const NuevaVentaScreen: React.FC = () => {
     }
   };
 
-  const handleFechaChange = (newFecha: string) => {
-    setFecha(newFecha);
-    if (turno) {
-      setTimeout(() => {
-        loadRestricciones(false);
-      }, 100);
-    }
-  };
-
   const handleNumericInput = (value: string) => {
-    if (inputFocus === 'numero') {
+    const focus = inputFocus ?? 'numero';
+    if (focus === 'numero') {
       if (value === '-') {
         setNumeroInput('');
       } else if (value === 'BORRAR') {
@@ -152,7 +142,7 @@ export const NuevaVentaScreen: React.FC = () => {
           if (newValue.length === 2) setInputFocus('monto');
         }
       }
-    } else if (inputFocus === 'monto') {
+    } else if (focus === 'monto') {
       if (value === '-') {
         setMontoInput('');
       } else if (value === 'BORRAR') {
@@ -182,24 +172,32 @@ export const NuevaVentaScreen: React.FC = () => {
       return;
     }
 
-    if (numerosRestringidos.includes(numero)) {
-      Alert.alert(
-        '⚠️ Número Restringido',
-        `El número ${numero.toString().padStart(2, '0')} no puede ser vendido en este turno.\n\nPor favor, selecciona otro número disponible.`,
-        [
-          {
-            text: 'Entendido',
-            style: 'default',
-            onPress: () => {
-              setNumeroInput('');
-              setInputFocus('numero');
+    const restriccion = restricciones.find((r) => r.numero === numero && r.estaRestringido);
+    if (restriccion) {
+      if (restriccion.tipoRestriccion === 'completo') {
+        Alert.alert(
+          '⚠️ Número Restringido',
+          `El número ${numero.toString().padStart(2, '0')} no puede ser vendido en este turno.`,
+          [
+            {
+              text: 'Entendido',
+              style: 'default',
+              onPress: () => {
+                setNumeroInput('');
+                setInputFocus('numero');
+              },
             },
-          },
-        ]
-      );
-      return;
+          ]
+        );
+        return;
+      }
+      if (restriccion.tipoRestriccion === 'monto' && restriccion.limiteMonto != null && monto >= Number(restriccion.limiteMonto)) {
+        setErrorMontoRestriccion(`El número solo está disponible con menos de C$${Number(restriccion.limiteMonto).toFixed(2)}`);
+        return;
+      }
     }
 
+    setErrorMontoRestriccion(null);
     setDetalles([...detalles, { numero, monto }]);
     setNumeroInput('');
     setMontoInput('');
@@ -255,7 +253,6 @@ export const NuevaVentaScreen: React.FC = () => {
         turnoId: turno.id,
         fecha,
         detalles,
-        observaciones: observaciones || undefined,
       });
       onSuccess?.();
       // Navegar a la pantalla de preview del boucher
@@ -321,79 +318,86 @@ export const NuevaVentaScreen: React.FC = () => {
     );
   }
 
+  const screenWidth = Dimensions.get('window').width;
+
   return (
     <View style={styles.container}>
       <AppHeader />
-      
-      <SubHeaderBar
-        title="Nueva Venta"
-        onBack={handleBack}
-      />
+      <SubHeaderBar title="Nueva Venta" onBack={handleBack} />
 
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={true}
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        style={styles.horizontalScroll}
+        contentContainerStyle={styles.horizontalScrollContent}
       >
-        {turnosProximos.length > 0 && turno && (
-          <TouchableOpacity activeOpacity={0.8} onPress={handleSeleccionarTurno}>
-            <Card style={styles.turnoCard}>
-              <View style={styles.turnoCardRow}>
-                <View>
-                  <Text style={styles.turnoLabel}>Turno</Text>
-                  <Text style={styles.turnoValue}>{formatearNombreTurno(turno)}</Text>
+        {/* Página 1: Todo en un solo scroll (turno, fecha, inputs, teclado, botón) */}
+        <View style={[styles.page, { width: screenWidth }]}>
+          <ScrollView
+            style={styles.formScroll}
+            contentContainerStyle={styles.formScrollContent}
+            showsVerticalScrollIndicator={true}
+          >
+            {turnosProximos.length > 0 && turno && (
+              <TouchableOpacity activeOpacity={0.8} onPress={handleSeleccionarTurno}>
+                <Card style={styles.turnoCard}>
+                  <View style={styles.turnoCardRow}>
+                    <View>
+                      <Text style={styles.turnoLabel}>Turno</Text>
+                      <Text style={styles.turnoValue}>{formatearNombreTurno(turno)}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={Colors.secondary} />
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.fechaInputContainer}>
+              <Text style={styles.fechaLabel}>Fecha</Text>
+              <Text style={styles.fechaValue}>{fecha}</Text>
+            </View>
+
+            <RestriccionesCard
+              restricciones={restricciones}
+              loading={loadingRestricciones}
+            />
+
+            <View style={styles.detallesSection}>
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <Input
+                    label="Número (0-99)"
+                    placeholder="00"
+                    value={numeroInput}
+                    onChangeText={handleNumeroChange}
+                    onFocus={() => setInputFocus('numero')}
+                    keyboardType="numeric"
+                    maxLength={2}
+                    showSoftInputOnFocus={false}
+                  />
                 </View>
-                <Ionicons name="chevron-forward" size={24} color={Colors.secondary} />
+                <View style={styles.inputHalf}>
+                  <Input
+                    label="Monto"
+                    placeholder="0.00"
+                    value={montoInput}
+                    onChangeText={(text) => {
+                      setErrorMontoRestriccion(null);
+                      setMontoInput(text);
+                    }}
+                    onFocus={() => setInputFocus('monto')}
+                    keyboardType="decimal-pad"
+                    showSoftInputOnFocus={false}
+                  />
+                  {errorMontoRestriccion ? (
+                    <Text style={styles.errorMontoRestriccion}>{errorMontoRestriccion}</Text>
+                  ) : null}
+                </View>
               </View>
-              <Text style={styles.turnoHint}>Toca para cambiar de turno</Text>
-            </Card>
-          </TouchableOpacity>
-        )}
-
-        <View style={styles.fechaInputContainer}>
-          <Input
-            label="Fecha"
-            value={fecha}
-            onChangeText={handleFechaChange}
-            placeholder="YYYY-MM-DD"
-          />
-        </View>
-
-        <RestriccionesCard
-          numerosRestringidos={numerosRestringidos}
-          loading={loadingRestricciones}
-        />
-
-        <View style={styles.detallesSection}>
-          <Text style={styles.label}>Números</Text>
-          <View style={styles.inputRow}>
-            <View style={styles.inputHalf}>
-              <Input
-                label="Número (0-99)"
-                placeholder="00"
-                value={numeroInput}
-                onChangeText={handleNumeroChange}
-                onFocus={() => setInputFocus('numero')}
-                keyboardType="numeric"
-                maxLength={2}
-                showSoftInputOnFocus={false}
-              />
             </View>
-            <View style={styles.inputHalf}>
-              <Input
-                label="Monto"
-                placeholder="0.00"
-                value={montoInput}
-                onChangeText={setMontoInput}
-                onFocus={() => setInputFocus('monto')}
-                keyboardType="decimal-pad"
-                showSoftInputOnFocus={false}
-              />
-            </View>
-          </View>
 
-          {inputFocus && (
-            <View style={styles.keyboardContainer}>
+            <View style={styles.keyboardSection}>
               <NumericKeyboard
                 onNumberPress={handleNumericInput}
                 onDelete={() => handleNumericInput('BORRAR')}
@@ -401,33 +405,33 @@ export const NuevaVentaScreen: React.FC = () => {
                 showNext={!!(numeroInput && montoInput)}
               />
             </View>
-          )}
-
-          <Button
-            title="Agregar Número"
-            onPress={addDetalle}
-            variant="primary"
-            disabled={!numeroInput || !montoInput}
-            style={styles.addDetalleButton}
-          />
-
-          <DetallesList detalles={detalles} onRemove={removeDetalle} total={total} />
+            <Button
+              title="Crear Venta"
+              onPress={handleCreate}
+              loading={creating}
+              style={styles.createButton}
+            />
+          </ScrollView>
         </View>
 
-        <Input
-          label="Observaciones (opcional)"
-          value={observaciones}
-          onChangeText={setObservaciones}
-          multiline
-          numberOfLines={3}
-        />
-
-        <Button
-          title="Crear Venta"
-          onPress={handleCreate}
-          loading={creating}
-          style={styles.createButton}
-        />
+        {/* Página 2: Lista de números y total; botón Crear Venta abajo */}
+        <View style={[styles.page, styles.listPage, { width: screenWidth }]}>
+          <Text style={styles.listPageTitle}>Números a comprar</Text>
+          <Text style={styles.listPageHint}>Desliza a la izquierda para volver al formulario</Text>
+          <ScrollView style={styles.listPageScroll} contentContainerStyle={styles.listPageScrollContent}>
+            {detalles.length === 0 ? (
+              <Text style={styles.emptyListText}>Aún no hay números. Agrega número y monto en la otra pantalla.</Text>
+            ) : (
+              <DetallesList detalles={detalles} onRemove={removeDetalle} total={total} />
+            )}
+          </ScrollView>
+          <Button
+            title="Crear Venta"
+            onPress={handleCreate}
+            loading={creating}
+            style={styles.createButton}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -438,18 +442,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background.primary,
   },
-  content: {
+  horizontalScroll: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 32,
+  horizontalScrollContent: {
+    flexGrow: 1,
+  },
+  page: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  formScroll: {
+    flex: 1,
+  },
+  formScrollContent: {
+    paddingBottom: 16,
   },
   turnoCard: {
     backgroundColor: Colors.primaryLight,
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 12,
+    marginBottom: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
   },
   turnoCardRow: {
     flexDirection: 'row',
@@ -457,28 +472,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   turnoLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: Colors.secondary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   turnoValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: Colors.secondary,
   },
   turnoHint: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.secondary,
-    marginTop: 8,
+    marginTop: 4,
     opacity: 0.9,
   },
   fechaInputContainer: {
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  fechaLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    marginBottom: 4,
+  },
+  fechaValue: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
   },
   detallesSection: {
-    marginTop: 8,
-    marginBottom: 20,
+    marginTop: 4,
+    marginBottom: 12,
   },
   label: {
     fontSize: 14,
@@ -494,15 +525,43 @@ const styles = StyleSheet.create({
   inputHalf: {
     flex: 1,
   },
-  keyboardContainer: {
-    marginVertical: 16,
+  errorMontoRestriccion: {
+    fontSize: 12,
+    color: Colors.danger,
+    marginTop: 4,
   },
-  addDetalleButton: {
-    marginTop: 8,
-    marginBottom: 16,
+  keyboardSection: {
+    paddingTop: 8,
   },
   createButton: {
-    marginTop: 16,
+    marginTop: 12,
+  },
+  listPage: {
+    paddingTop: 16,
+  },
+  listPageTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  listPageHint: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginBottom: 16,
+  },
+  listPageScroll: {
+    flex: 1,
+  },
+  listPageScrollContent: {
+    paddingBottom: 16,
+  },
+  emptyListText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 24,
+    paddingHorizontal: 16,
   },
   errorContainer: {
     flex: 1,

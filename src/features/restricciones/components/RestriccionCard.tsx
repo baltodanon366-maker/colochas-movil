@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
+import { Button } from '../../../components/Button';
 import { Colors } from '../../../constants/colors';
 import { RestriccionNumero } from '../../../types';
 
@@ -11,6 +12,8 @@ interface RestriccionCardProps {
 }
 
 export const RestriccionCard: React.FC<RestriccionCardProps> = ({ restriccion, onDelete }) => {
+  if (!restriccion) return null;
+
   const getTipoText = () => {
     switch (restriccion.tipoRestriccion) {
       case 'completo':
@@ -34,20 +37,24 @@ export const RestriccionCard: React.FC<RestriccionCardProps> = ({ restriccion, o
         <View style={styles.left}>
           <View style={styles.numeroBadge}>
             <Text style={styles.numeroText}>
-              {restriccion.numero.toString().padStart(2, '0')}
+              {String(restriccion.numero ?? 0).padStart(2, '0')}
             </Text>
           </View>
           <View style={styles.info}>
             <Text style={styles.tipo}>{getTipoText()}</Text>
             <Text style={styles.fecha}>
-              {new Date(restriccion.fecha).toLocaleDateString()}
+              {restriccion.fecha ? new Date(restriccion.fecha).toLocaleDateString() : '—'}
             </Text>
           </View>
         </View>
-        <TouchableOpacity onPress={onDelete} style={styles.deleteButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="close-circle" size={24} color={Colors.danger} />
-        </TouchableOpacity>
       </View>
+      <Button
+        title="Quitar restricción"
+        onPress={onDelete}
+        variant="danger"
+        style={styles.quitarButton}
+        icon={<Ionicons name="close-circle-outline" size={18} color={Colors.text.inverse} />}
+      />
     </Card>
   );
 };
@@ -58,8 +65,8 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
   left: {
     flexDirection: 'row',
@@ -95,8 +102,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.text.secondary,
   },
-  deleteButton: {
-    padding: 4,
+  quitarButton: {
+    width: '100%',
+    marginTop: 0,
   },
 });
 

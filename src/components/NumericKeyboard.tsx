@@ -26,8 +26,6 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
 
   const specialButtons = [
     { label: 'BORRAR', onPress: onDelete, color: Colors.danger },
-    { label: '000', onPress: () => onNumberPress('000'), color: Colors.danger },
-    { label: '00', onPress: () => onNumberPress('00'), color: Colors.danger },
   ];
 
   if (showNext && onNext) {
@@ -79,24 +77,28 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
+    paddingVertical: 4,
   },
   numbersContainer: {
     flex: 3,
-    gap: 8,
+    gap: 4,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
+    maxHeight: 36,
+    paddingVertical: 2,
   },
   numberButton: {
     flex: 1,
-    aspectRatio: 1,
     backgroundColor: Colors.success,
-    borderRadius: 8,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 50,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    minHeight: 0,
     shadowColor: Colors.shadow.color,
     shadowOffset: {
       width: 0,
@@ -108,11 +110,12 @@ const styles = StyleSheet.create({
   },
   specialButton: {
     flex: 1,
-    aspectRatio: 1,
-    borderRadius: 8,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 50,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    minHeight: 0,
     shadowColor: Colors.shadow.color,
     shadowOffset: {
       width: 0,
@@ -123,19 +126,20 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   numberText: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text.inverse,
   },
   specialText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
     color: Colors.text.inverse,
   },
   specialContainer: {
     flex: 1,
-    gap: 8,
+    gap: 4,
     justifyContent: 'flex-start',
+    paddingVertical: 4,
   },
 });
 

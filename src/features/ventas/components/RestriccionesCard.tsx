@@ -3,18 +3,20 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
 import { Colors } from '../../../constants/colors';
+import { RestriccionNumero } from '../../../types';
 
 interface RestriccionesCardProps {
-  numerosRestringidos: number[];
+  restricciones: RestriccionNumero[];
   loading?: boolean;
 }
 
 export const RestriccionesCard: React.FC<RestriccionesCardProps> = ({
-  numerosRestringidos,
+  restricciones,
   loading = false,
 }) => {
-  // Si está cargando y no hay datos previos, mostrar loading
-  if (loading && numerosRestringidos.length === 0) {
+  const list = restricciones.filter((r) => r.estaRestringido);
+
+  if (loading && list.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Cargando restricciones...</Text>
@@ -22,29 +24,29 @@ export const RestriccionesCard: React.FC<RestriccionesCardProps> = ({
     );
   }
 
-  // Si no hay restricciones y no está cargando, no mostrar nada
-  if (numerosRestringidos.length === 0 && !loading) {
+  if (list.length === 0 && !loading) {
     return null;
   }
 
   return (
     <Card style={styles.restriccionesCard}>
       <View style={styles.restriccionesHeader}>
-        <Ionicons name="ban" size={20} color={Colors.danger} />
+        <Ionicons name="ban" size={18} color={Colors.danger} />
         <Text style={styles.restriccionesTitle}>
-          Números Restringidos ({numerosRestringidos.length})
+          Números Restringidos ({list.length})
         </Text>
       </View>
-      <Text style={styles.restriccionesSubtitle}>
-        Estos números no pueden ser vendidos en este turno
-      </Text>
       <View style={styles.restriccionesGrid}>
-        {numerosRestringidos.map((numero) => (
-          <View key={numero} style={styles.restriccionBadge}>
-            <Text style={styles.restriccionBadgeText}>
-              {numero.toString().padStart(2, '0')}
+        {list.map((r) => (
+          <View key={`${r.numero}-${r.id}`} style={styles.restriccionItem}>
+            <Text style={styles.restriccionNumero}>
+              {r.numero.toString().padStart(2, '0')}
             </Text>
-            <Ionicons name="ban" size={12} color={Colors.danger} style={styles.restriccionIcon} />
+            {r.tipoRestriccion === 'monto' && r.limiteMonto != null && (
+              <Text style={styles.restriccionMonto}>
+                ({Number(r.limiteMonto)})
+              </Text>
+            )}
           </View>
         ))}
       </View>
@@ -54,52 +56,47 @@ export const RestriccionesCard: React.FC<RestriccionesCardProps> = ({
 
 const styles = StyleSheet.create({
   restriccionesCard: {
-    marginBottom: 20,
+    marginBottom: 12,
     backgroundColor: Colors.errorLight,
     borderWidth: 2,
     borderColor: Colors.danger,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 10,
+    padding: 10,
   },
   restriccionesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 4,
   },
   restriccionesTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: Colors.danger,
   },
   restriccionesSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.text.secondary,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   restriccionesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
-  restriccionBadge: {
+  restriccionItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background.secondary,
-    borderWidth: 1,
-    borderColor: Colors.danger,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    gap: 4,
+    alignItems: 'baseline',
   },
-  restriccionBadgeText: {
-    fontSize: 14,
+  restriccionNumero: {
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.danger,
   },
-  restriccionIcon: {
-    marginLeft: 2,
+  restriccionMonto: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text.primary,
   },
   loadingContainer: {
     padding: 12,

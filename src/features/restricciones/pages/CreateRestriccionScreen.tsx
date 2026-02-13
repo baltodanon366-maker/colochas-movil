@@ -17,7 +17,6 @@ export const CreateRestriccionScreen: React.FC = () => {
 
   const [tipoRestriccion, setTipoRestriccion] = useState<TipoRestriccion>('completo');
   const [limiteMonto, setLimiteMonto] = useState('');
-  const [limiteCantidad, setLimiteCantidad] = useState('');
   const [numerosSeleccionados, setNumerosSeleccionados] = useState<number[]>([]);
   const [creating, setCreating] = useState(false);
 
@@ -48,14 +47,6 @@ export const CreateRestriccionScreen: React.FC = () => {
       }
     }
 
-    if (tipoRestriccion === 'cantidad') {
-      const cantidad = parseInt(limiteCantidad);
-      if (!limiteCantidad || isNaN(cantidad) || cantidad <= 0) {
-        Alert.alert('Error', 'Debe especificar un límite de cantidad mayor a 0');
-        return;
-      }
-    }
-
     setCreating(true);
     try {
       const payload: any = {
@@ -67,8 +58,6 @@ export const CreateRestriccionScreen: React.FC = () => {
 
       if (tipoRestriccion === 'monto') {
         payload.limiteMonto = parseFloat(limiteMonto);
-      } else if (tipoRestriccion === 'cantidad') {
-        payload.limiteCantidad = parseInt(limiteCantidad);
       }
 
       await restriccionesService.createMultiple(payload);
@@ -97,7 +86,7 @@ export const CreateRestriccionScreen: React.FC = () => {
         onBack={handleBack}
       />
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={true}
@@ -136,22 +125,6 @@ export const CreateRestriccionScreen: React.FC = () => {
               Por Monto
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tipoOption,
-              tipoRestriccion === 'cantidad' && styles.tipoOptionActive,
-            ]}
-            onPress={() => setTipoRestriccion('cantidad')}
-          >
-            <Text
-              style={[
-                styles.tipoOptionText,
-                tipoRestriccion === 'cantidad' && styles.tipoOptionTextActive,
-              ]}
-            >
-              Por Cantidad
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {tipoRestriccion === 'monto' && (
@@ -161,16 +134,6 @@ export const CreateRestriccionScreen: React.FC = () => {
             onChangeText={setLimiteMonto}
             placeholder="Ej: 50.00"
             keyboardType="decimal-pad"
-          />
-        )}
-
-        {tipoRestriccion === 'cantidad' && (
-          <Input
-            label="Límite de Cantidad"
-            value={limiteCantidad}
-            onChangeText={setLimiteCantidad}
-            placeholder="Ej: 5"
-            keyboardType="numeric"
           />
         )}
 
@@ -184,16 +147,19 @@ export const CreateRestriccionScreen: React.FC = () => {
           selectedNumbers={numerosSeleccionados}
           restrictedNumbers={[]}
           onNumberPress={handleToggleNumero}
+          columns={7}
         />
+      </ScrollView>
 
+      <View style={styles.footer}>
         <Button
-          title="Crear Restricciones"
+          title="Crear Restricción"
           onPress={handleCreate}
           loading={creating}
           disabled={numerosSeleccionados.length === 0}
           style={styles.createButton}
         />
-      </ScrollView>
+      </View>
     </View>
   );
 };
@@ -208,7 +174,15 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 24,
+  },
+  footer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 24,
+    backgroundColor: Colors.background.primary,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border.light,
   },
   label: {
     fontSize: 14,
@@ -251,6 +225,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   createButton: {
-    marginTop: 16,
+    width: '100%',
   },
 });

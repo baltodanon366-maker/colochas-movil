@@ -59,9 +59,10 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: Colors.background.secondary, // Background blanco
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    fontSize: 15,
     borderWidth: 1,
     borderColor: Colors.secondary, // Borde dorado
     color: Colors.secondary, // Texto dorado al escribir

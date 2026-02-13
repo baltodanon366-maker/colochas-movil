@@ -8,7 +8,7 @@ import { NumericKeyboard } from '../../../components/NumericKeyboard';
 import { RestriccionesCard } from './RestriccionesCard';
 import { DetallesList } from './DetallesList';
 import { Colors } from '../../../constants/colors';
-import { Turno, DetalleVenta } from '../../../types';
+import { Turno, DetalleVenta, RestriccionNumero } from '../../../types';
 import { formatearNombreTurno } from '../../../utils/turnoUtils';
 import { restriccionesService } from '../../restricciones/services/restricciones.service';
 import { format } from 'date-fns';
@@ -38,9 +38,10 @@ export const VentaFormModal: React.FC<VentaFormModalProps> = ({
   const [montoInput, setMontoInput] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [inputFocus, setInputFocus] = useState<'numero' | 'monto' | null>(null);
-  const [numerosRestringidos, setNumerosRestringidos] = useState<number[]>([]);
+  const [restricciones, setRestricciones] = useState<RestriccionNumero[]>([]);
   const [loadingRestricciones, setLoadingRestricciones] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [errorMontoRestriccion, setErrorMontoRestriccion] = useState<string | null>(null);
   const turnoAnteriorRef = useRef<Turno | null>(null);
   const modalAbiertoRef = useRef(false);
 
@@ -63,7 +64,8 @@ export const VentaFormModal: React.FC<VentaFormModalProps> = ({
       setNumeroInput('');
       setMontoInput('');
       setObservaciones('');
-      setNumerosRestringidos([]);
+      setRestricciones([]);
+      setErrorMontoRestriccion(null);
       setInputFocus(null);
       setLoadingRestricciones(false);
       modalAbiertoRef.current = false;
@@ -73,24 +75,20 @@ export const VentaFormModal: React.FC<VentaFormModalProps> = ({
 
   const loadRestricciones = async (mostrarLoading: boolean = false) => {
     if (!turno) {
-      setNumerosRestringidos([]);
+      setRestricciones([]);
       return;
     }
 
-    // Solo mostrar loading si se solicita explícitamente (primera carga)
     if (mostrarLoading) {
       setLoadingRestricciones(true);
     }
 
     try {
       const restriccionesData = await restriccionesService.getAll(turno.id, fecha);
-      const numerosRestringidosList = restriccionesData
-        .filter(r => r.estaRestringido)
-        .map(r => r.numero);
-      setNumerosRestringidos(numerosRestringidosList);
+      setRestricciones(restriccionesData || []);
     } catch (error) {
       console.error('Error al cargar restricciones:', error);
-      setNumerosRestringidos([]);
+      setRestricciones([]);
     } finally {
       setLoadingRestricciones(false);
     }
@@ -147,24 +145,32 @@ export const VentaFormModal: React.FC<VentaFormModalProps> = ({
       return;
     }
 
-    if (numerosRestringidos.includes(numero)) {
-      Alert.alert(
-        '⚠️ Número Restringido',
-        `El número ${numero.toString().padStart(2, '0')} no puede ser vendido en este turno.\n\nPor favor, selecciona otro número disponible.`,
-        [
-          {
-            text: 'Entendido',
-            style: 'default',
-            onPress: () => {
-              setNumeroInput('');
-              setInputFocus('numero');
+    const restriccion = restricciones.find((r) => r.numero === numero && r.estaRestringido);
+    if (restriccion) {
+      if (restriccion.tipoRestriccion === 'completo') {
+        Alert.alert(
+          '⚠️ Número Restringido',
+          `El número ${numero.toString().padStart(2, '0')} no puede ser vendido en este turno.`,
+          [
+            {
+              text: 'Entendido',
+              style: 'default',
+              onPress: () => {
+                setNumeroInput('');
+                setInputFocus('numero');
+              },
             },
-          },
-        ]
-      );
-      return;
+          ]
+        );
+        return;
+      }
+      if (restriccion.tipoRestriccion === 'monto' && restriccion.limiteMonto != null && monto >= Number(restriccion.limiteMonto)) {
+        setErrorMontoRestriccion(`El número solo está disponible con menos de C$${Number(restriccion.limiteMonto).toFixed(2)}`);
+        return;
+      }
     }
 
+    setErrorMontoRestriccion(null);
     setDetalles([...detalles, { numero, monto }]);
     setNumeroInput('');
     setMontoInput('');
@@ -259,7 +265,7 @@ export const VentaFormModal: React.FC<VentaFormModalProps> = ({
         </View>
 
         <RestriccionesCard
-          numerosRestringidos={numerosRestringidos}
+          restricciones={restricciones}
           loading={loadingRestricciones}
         />
 
@@ -271,7 +277,10 @@ export const VentaFormModal: React.FC<VentaFormModalProps> = ({
                 label="Número (0-99)"
                 placeholder="00"
                 value={numeroInput}
-                onChangeText={setNumeroInput}
+                onChangeText={(text) => {
+                  setErrorMontoRestriccion(null);
+                  setNumeroInput(text);
+                }}
                 onFocus={() => setInputFocus('numero')}
                 keyboardType="numeric"
                 maxLength={2}
@@ -282,10 +291,16 @@ export const VentaFormModal: React.FC<VentaFormModalProps> = ({
                 label="Monto"
                 placeholder="0.00"
                 value={montoInput}
-                onChangeText={setMontoInput}
+                onChangeText={(text) => {
+                  setErrorMontoRestriccion(null);
+                  setMontoInput(text);
+                }}
                 onFocus={() => setInputFocus('monto')}
                 keyboardType="decimal-pad"
               />
+              {errorMontoRestriccion ? (
+                <Text style={styles.errorMontoRestriccion}>{errorMontoRestriccion}</Text>
+              ) : null}
             </View>
           </View>
 
@@ -368,6 +383,11 @@ const styles = StyleSheet.create({
   },
   inputHalf: {
     flex: 1,
+  },
+  errorMontoRestriccion: {
+    fontSize: 12,
+    color: Colors.danger,
+    marginTop: 4,
   },
   keyboardContainer: {
     marginVertical: 16,

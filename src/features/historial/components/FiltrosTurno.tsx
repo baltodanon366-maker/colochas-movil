@@ -9,6 +9,10 @@ interface FiltrosTurnoProps {
   filtroTurnoId: number | null;
   onSelectCategoria: (categoria: CategoriaTurno | null) => void;
   onSelectTurno: (turnoId: number | null) => void;
+  /** Oculta el chip "Todos" (solo La Diaria / La Tica) */
+  hideTodosCategoria?: boolean;
+  /** Oculta el chip "Todos los Turnos" */
+  hideTodosTurnos?: boolean;
 }
 
 export const FiltrosTurno: React.FC<FiltrosTurnoProps> = ({
@@ -17,6 +21,8 @@ export const FiltrosTurno: React.FC<FiltrosTurnoProps> = ({
   filtroTurnoId,
   onSelectCategoria,
   onSelectTurno,
+  hideTodosCategoria = false,
+  hideTodosTurnos = false,
 }) => {
   const turnosFiltrados = filtroCategoria
     ? turnos.filter((t) => t.categoria === filtroCategoria)
@@ -31,22 +37,24 @@ export const FiltrosTurno: React.FC<FiltrosTurnoProps> = ({
         style={styles.filtersScroll}
         contentContainerStyle={styles.filtersScrollContent}
       >
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            filtroCategoria === null && styles.filterChipActive,
-          ]}
-          onPress={() => onSelectCategoria(null)}
-        >
-          <Text
+        {!hideTodosCategoria && (
+          <TouchableOpacity
             style={[
-              styles.filterChipText,
-              filtroCategoria === null && styles.filterChipTextActive,
+              styles.filterChip,
+              filtroCategoria === null && styles.filterChipActive,
             ]}
+            onPress={() => onSelectCategoria(null)}
           >
-            Todos
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.filterChipText,
+                filtroCategoria === null && styles.filterChipTextActive,
+              ]}
+            >
+              Todos
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[
             styles.filterChip,
@@ -88,22 +96,24 @@ export const FiltrosTurno: React.FC<FiltrosTurnoProps> = ({
           style={styles.turnosScroll}
           contentContainerStyle={styles.turnosScrollContent}
         >
-          <TouchableOpacity
-            style={[
-              styles.turnoChip,
-              filtroTurnoId === null && styles.turnoChipActive,
-            ]}
-            onPress={() => onSelectTurno(null)}
-          >
-            <Text
+          {!hideTodosTurnos && (
+            <TouchableOpacity
               style={[
-                styles.turnoChipText,
-                filtroTurnoId === null && styles.turnoChipTextActive,
+                styles.turnoChip,
+                filtroTurnoId === null && styles.turnoChipActive,
               ]}
+              onPress={() => onSelectTurno(null)}
             >
-              Todos los Turnos
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.turnoChipText,
+                  filtroTurnoId === null && styles.turnoChipTextActive,
+                ]}
+              >
+                Todos los Turnos
+              </Text>
+            </TouchableOpacity>
+          )}
           {turnosFiltrados.map((turno) => (
             <TouchableOpacity
               key={turno.id}

@@ -66,6 +66,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const MainTabs = () => {
   return (
     <Tab.Navigator
+      initialRouteName="Ventas"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,

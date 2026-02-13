@@ -99,7 +99,10 @@ export const RestriccionesScreen: React.FC = () => {
         }}
       />
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
 
         <TurnoSelector
           turnos={turnos}
