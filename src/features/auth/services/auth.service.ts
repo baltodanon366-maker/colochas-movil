@@ -9,7 +9,6 @@ export interface SignUpData {
 }
 
 export interface LoginData {
-  name: string;
   telefono: string;
 }
 

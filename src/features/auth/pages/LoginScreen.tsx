@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Images } from '../../../constants/images';
 
 export const LoginScreen: React.FC = () => {
-  const [name, setName] = useState('');
   const [telefono, setTelefono] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -27,8 +26,8 @@ export const LoginScreen: React.FC = () => {
   };
 
   const handleLogin = async () => {
-    if (!name.trim() || !telefono) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+    if (!telefono) {
+      Alert.alert('Error', 'Ingresa tu número de teléfono');
       return;
     }
     if (telefono.length !== 8) {
@@ -38,7 +37,7 @@ export const LoginScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      await login(name.trim(), telefono);
+      await login(telefono);
     } catch (error: any) {
       const errorMessage = error.message || '';
       const isInvalidCredentials =
@@ -51,7 +50,7 @@ export const LoginScreen: React.FC = () => {
       if (isInvalidCredentials) {
         Alert.alert(
           'Usuario no encontrado',
-          'El nombre o el número de teléfono no son correctos. Por favor verifica e intenta nuevamente.'
+          'El número de teléfono no está registrado o es incorrecto. Verifica e intenta nuevamente.'
         );
       } else {
         Alert.alert('Error de inicio de sesión', errorMessage || 'Ocurrió un error al intentar iniciar sesión');
@@ -85,15 +84,6 @@ export const LoginScreen: React.FC = () => {
               />
             </View>
             <View style={styles.form}>
-              <Input
-                label="Nombre de usuario"
-                placeholder="Ingresa tu nombre completo"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                containerStyle={styles.inputContainer}
-              />
-
               <Input
                 label="Número de teléfono"
                 placeholder="8 dígitos"
