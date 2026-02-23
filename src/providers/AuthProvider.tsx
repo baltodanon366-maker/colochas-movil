@@ -1,5 +1,7 @@
 import React, { ReactNode, useState, useEffect, createContext, useContext } from 'react';
 import { authService, User } from '../features/auth/services/auth.service';
+import { apiService } from '../services/api.service';
+import { API_ROOT_URL } from '../config/api.config';
 
 interface AuthContextType {
   user: User | null;
@@ -22,7 +24,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    // Ping a la raíz de la API para despertarla si está dormida (Render)
+    fetch(API_ROOT_URL, { method: 'GET' }).catch(() => {});
     checkAuthStatus();
+  }, []);
+
+  useEffect(() => {
+    apiService.setOnUnauthorized(() => {
+      setUser(null);
+      setIsAuthenticated(false);
+    });
+    apiService.setRefreshTokenProvider(() => authService.refreshToken());
   }, []);
 
   const checkAuthStatus = async () => {

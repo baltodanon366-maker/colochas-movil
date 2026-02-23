@@ -35,9 +35,22 @@ export interface ApiError {
   message: string;
 }
 
+const RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 2;
+
+function isRetryableNetworkError(error: any): boolean {
+  return (
+    error.code === 'ECONNABORTED' ||
+    error.code === 'ERR_NETWORK' ||
+    error.message === 'Network Error'
+  );
+}
+
 class ApiService {
   private client: AxiosInstance;
   private token: string | null = null;
+  private onUnauthorized: (() => void) | null = null;
+  private refreshTokenProvider: (() => Promise<{ access_token: string } | null>) | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -45,12 +58,10 @@ class ApiService {
       timeout: API_TIMEOUT,
       headers: {
         'Content-Type': 'application/json',
-        // Header para saltar la advertencia de ngrok (plan gratuito)
         'ngrok-skip-browser-warning': 'true',
       },
     });
 
-    // Interceptor para agregar token a las peticiones
     this.client.interceptors.request.use(
       async (config) => {
         if (!this.token) {
@@ -61,26 +72,45 @@ class ApiService {
         }
         return config;
       },
-      (error) => {
-        return Promise.reject(error);
-      }
+      (error) => Promise.reject(error)
     );
 
-    // Interceptor para manejar respuestas y errores
     this.client.interceptors.response.use(
-      (response) => {
-        return response;
-      },
+      (response) => response,
       async (error: AxiosError<ApiError>) => {
-        // Solo limpiar auth si es un error 401 (no autorizado)
-        if (error.response?.status === 401) {
-          await this.clearAuth();
+        const config = error.config as any;
+
+        // Reintento por timeout o red (útil cuando Render se despierta)
+        const retryCount = (config?.__retryCount ?? 0);
+        if (isRetryableNetworkError(error) && config && retryCount < MAX_RETRIES) {
+          config.__retryCount = retryCount + 1;
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          return this.client.request(config);
         }
-        // Para errores de red (sin respuesta), no hacer nada especial
-        // Solo rechazar la promesa para que el código que llama maneje el error
+
+        if (error.response?.status === 401) {
+          const refreshed = await this.refreshTokenProvider?.().catch(() => null);
+          if (refreshed?.access_token) {
+            this.token = refreshed.access_token;
+            config.headers = config.headers || {};
+            config.headers.Authorization = `Bearer ${refreshed.access_token}`;
+            return this.client.request(config);
+          }
+          await this.clearAuth();
+          this.onUnauthorized?.();
+        }
+
         return Promise.reject(error);
       }
     );
+  }
+
+  setOnUnauthorized(callback: () => void) {
+    this.onUnauthorized = callback;
+  }
+
+  setRefreshTokenProvider(provider: () => Promise<{ access_token: string } | null>) {
+    this.refreshTokenProvider = provider;
   }
 
   async setToken(token: string) {
@@ -92,6 +122,7 @@ class ApiService {
     this.token = null;
     await AsyncStorage.removeItem('auth_token');
     await AsyncStorage.removeItem('user_data');
+    await AsyncStorage.removeItem('auth_refresh_token');
   }
 
   async getToken(): Promise<string | null> {
