@@ -238,16 +238,17 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 24,
+    paddingHorizontal: 12,
   },
   modalIcon: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   modalMessage: {
     fontSize: 16,
     color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
     lineHeight: 22,
   },
   modalButtons: {
