@@ -16,9 +16,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ rightIcon, onRightPress })
   const { user } = useAuth();
 
   const handleLogoPress = () => {
-    // Navegar al Dashboard/Home
-    // Usar navigate para ir a MainTabs con el screen Dashboard
-    navigation.navigate('MainTabs', { screen: 'Dashboard' });
+    if ((navigation as any).openDrawer) {
+      (navigation as any).navigate('Ventas', { categoria: 'diaria' });
+    } else {
+      navigation.navigate('MainDrawer', { screen: 'Ventas', params: { categoria: 'diaria' } });
+    }
+  };
+
+  const handleMenuPress = () => {
+    if ((navigation as any).openDrawer) {
+      (navigation as any).openDrawer();
+    } else {
+      navigation.navigate('MainDrawer', { screen: 'DrawerMenu' } as any);
+    }
   };
 
   const handleProfilePress = () => {
@@ -34,7 +44,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ rightIcon, onRightPress })
       style={styles.gradient}
     >
       <View style={styles.container}>
-        <TouchableOpacity 
+        <TouchableOpacity
+          onPress={handleMenuPress}
+          style={styles.menuButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="menu" size={28} color={Colors.text.inverse} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={handleLogoPress}
           style={styles.logoContainer}
           activeOpacity={0.7}
@@ -84,6 +101,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  menuButton: {
+    padding: 4,
+    marginRight: 8,
   },
   logoContainer: {
     flexDirection: 'row',

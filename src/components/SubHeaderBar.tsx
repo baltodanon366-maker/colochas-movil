@@ -6,33 +6,49 @@ import { Colors } from '../constants/colors';
 interface SubHeaderBarProps {
   title: string;
   onBack: () => void;
+  showBackButton?: boolean;
   showAddButton?: boolean;
   onAddPress?: () => void;
+  rightLabel?: string;
+  onRightPress?: () => void;
 }
 
 export const SubHeaderBar: React.FC<SubHeaderBarProps> = ({
   title,
   onBack,
+  showBackButton = true,
   showAddButton = false,
   onAddPress,
+  rightLabel,
+  onRightPress,
 }) => {
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
-        <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-      </TouchableOpacity>
+      {showBackButton ? (
+        <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.backButtonPlaceholder} />
+      )}
 
       <Text style={styles.title}>{title}</Text>
 
-      {showAddButton && onAddPress && (
-        <TouchableOpacity onPress={onAddPress} style={styles.addButton} activeOpacity={0.7}>
-          <View style={styles.addButtonCircle}>
-            <Ionicons name="add" size={24} color={Colors.text.primary} />
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {!showAddButton && <View style={styles.addButtonPlaceholder} />}
+      <View style={styles.rightRow}>
+        {rightLabel && onRightPress && (
+          <TouchableOpacity onPress={onRightPress} style={styles.rightLabelButton} activeOpacity={0.7}>
+            <Text style={styles.rightLabelText}>{rightLabel}</Text>
+          </TouchableOpacity>
+        )}
+        {showAddButton && onAddPress && (
+          <TouchableOpacity onPress={onAddPress} style={styles.addButton} activeOpacity={0.7}>
+            <View style={styles.addButtonCircle}>
+              <Ionicons name="add" size={24} color={Colors.text.primary} />
+            </View>
+          </TouchableOpacity>
+        )}
+        {!showAddButton && !rightLabel && <View style={styles.addButtonPlaceholder} />}
+      </View>
     </View>
   );
 };
@@ -51,6 +67,10 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 4,
   },
+  backButtonPlaceholder: {
+    width: 32,
+    height: 32,
+  },
   title: {
     flex: 1,
     fontSize: 20,
@@ -58,6 +78,20 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     textAlign: 'center',
     marginHorizontal: 16,
+  },
+  rightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rightLabelButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  rightLabelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   addButton: {
     padding: 4,

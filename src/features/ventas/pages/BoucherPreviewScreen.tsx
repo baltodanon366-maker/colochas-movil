@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,40 +26,41 @@ export const BoucherPreviewScreen: React.FC = () => {
 
   const [printing, setPrinting] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const autoPrintDoneRef = useRef(false);
 
-  const navigateToNuevaVenta = () => {
-    // Regresar al formulario de nueva venta con los mismos parámetros del turno
-    if (venta?.turnoId) {
-      navigation.navigate('NuevaVenta', {
-        turnoId: venta.turnoId,
-        categoria: venta.turno?.categoria || undefined,
-      });
-    } else {
-      // Si no hay turno, ir a la lista de ventas
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [
-            {
-              name: 'MainTabs',
-              state: {
-                routes: [
-                  { name: 'Ventas' },
-                ],
-                index: 0,
-              },
+  /** Auto-abrir impresión al entrar a la pantalla (una sola vez). */
+  useEffect(() => {
+    if (!venta || autoPrintDoneRef.current) return;
+    autoPrintDoneRef.current = true;
+    const t = setTimeout(() => {
+      handlePrint();
+    }, 500);
+    return () => clearTimeout(t);
+  }, [venta?.id]);
+
+  /** Siempre ir a la lista de ventas (no volver al formulario de nueva venta). */
+  const navigateToListaVentas = () => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MainDrawer',
+            state: {
+              routes: [{ name: 'Ventas', params: { categoria: 'diaria' } }],
+              index: 0,
             },
-          ],
-        })
-      );
-    }
+          },
+        ],
+      })
+    );
   };
 
   if (!venta) {
     return (
       <View style={styles.container}>
         <AppHeader />
-        <SubHeaderBar title="Boucher de Venta" onBack={navigateToNuevaVenta} />
+        <SubHeaderBar title="Boucher de Venta" onBack={navigateToListaVentas} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>No se encontró la venta</Text>
         </View>
@@ -73,7 +74,7 @@ export const BoucherPreviewScreen: React.FC = () => {
       await printerService.printBoucher(venta, {
         nombreEmpresa: 'La Colocha',
       });
-      navigateToNuevaVenta();
+      navigateToListaVentas();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo procesar la impresión');
     } finally {
@@ -95,7 +96,7 @@ export const BoucherPreviewScreen: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigateToNuevaVenta();
+    navigateToListaVentas();
   };
 
   return (

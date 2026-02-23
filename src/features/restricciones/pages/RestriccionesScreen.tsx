@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../../components/AppHeader';
 import { SubHeaderBar } from '../../../components/SubHeaderBar';
@@ -11,18 +11,14 @@ import { Colors } from '../../../constants/colors';
 import { format } from 'date-fns';
 import { useAuth } from '../../../hooks/useAuth';
 import { CategoriaTurno } from '../../../types';
-import {
-  CategoriaSelector,
-  TurnoSelector,
-  TurnoInfoCard,
-  RestriccionesList,
-} from '../components';
+import { MainDrawerParamList } from '../../../navigation/AppNavigator';
+import { TurnoSelector, TurnoInfoCard, RestriccionesList } from '../components';
 import { useRestricciones } from '../hooks/useRestricciones';
-
-type RestriccionesView = 'categoria' | 'restricciones';
 
 export const RestriccionesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute();
+  const params = (route.params || {}) as MainDrawerParamList['Restricciones'];
   const { user } = useAuth();
   const isAdmin = user?.roles?.some((role: any) => {
     if (typeof role === 'string') return role.toLowerCase() === 'admin';
@@ -30,8 +26,7 @@ export const RestriccionesScreen: React.FC = () => {
     return false;
   });
 
-  const [view, setView] = useState<RestriccionesView>('categoria');
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaTurno | null>(null);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaTurno | null>(params.categoria ?? 'diaria');
   const [selectedTurnoId, setSelectedTurnoId] = useState<number | null>(null);
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));
 
@@ -41,32 +36,23 @@ export const RestriccionesScreen: React.FC = () => {
     fecha
   );
 
-  const handleSeleccionarCategoria = async (categoria: CategoriaTurno) => {
-    setCategoriaSeleccionada(categoria);
-    setView('restricciones');
-    if (turnos.length > 0) {
+  useEffect(() => {
+    if (categoriaSeleccionada && turnos.length > 0 && selectedTurnoId === null) {
       setSelectedTurnoId(turnos[0].id);
     }
-  };
+  }, [categoriaSeleccionada, turnos, selectedTurnoId]);
 
   const handleSeleccionarTurno = (turnoId: number) => {
     setSelectedTurnoId(turnoId);
   };
 
-  const handleBackToCategoria = () => {
-    setView('categoria');
-    setCategoriaSeleccionada(null);
-    setSelectedTurnoId(null);
+  const handleBack = () => {
+    if ((navigation as any).openDrawer) {
+      (navigation as any).openDrawer();
+    } else {
+      navigation.navigate('MainDrawer', { screen: 'DrawerMenu' } as any);
+    }
   };
-
-  if (view === 'categoria') {
-    return (
-      <View style={styles.container}>
-        <AppHeader />
-        <CategoriaSelector onSelectCategoria={handleSeleccionarCategoria} />
-      </View>
-    );
-  }
 
   if (loading) {
     return (
@@ -85,8 +71,11 @@ export const RestriccionesScreen: React.FC = () => {
       
       <SubHeaderBar
         title={categoriaSeleccionada === 'diaria' ? 'La Diaria' : 'La Tica'}
-        onBack={handleBackToCategoria}
+        onBack={handleBack}
+        showBackButton={false}
         showAddButton={!!isAdmin && !!selectedTurnoId}
+        rightLabel={categoriaSeleccionada === 'diaria' ? 'La Tica' : 'La Diaria'}
+        onRightPress={() => setCategoriaSeleccionada(categoriaSeleccionada === 'diaria' ? 'tica' : 'diaria')}
         onAddPress={() => {
           if (!selectedTurnoId) return;
           const parent = navigation.getParent();

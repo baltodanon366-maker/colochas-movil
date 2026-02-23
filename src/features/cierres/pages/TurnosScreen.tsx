@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Loading } from '../../../components/Loading';
 import { EmptyState } from '../../../components/EmptyState';
@@ -10,20 +10,19 @@ import { Colors } from '../../../constants/colors';
 import { useAuth } from '../../../hooks/useAuth';
 import { Turno, CategoriaTurno } from '../../../types';
 import { format } from 'date-fns';
-import {
-  CategoriaSelector,
-  TurnoCard,
-  RestriccionesList,
-} from '../components';
+import { MainDrawerParamList } from '../../../navigation/AppNavigator';
+import { TurnoCard, RestriccionesList } from '../components';
 import { useTurnos } from '../hooks/useTurnos';
 import { turnosService } from '../../../services/turnos.service';
 
 export const TurnosScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute();
+  const params = (route.params || {}) as MainDrawerParamList['Turnos'];
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('admin');
 
-  const [filterCategoria, setFilterCategoria] = useState<CategoriaTurno | null>(null);
+  const [filterCategoria, setFilterCategoria] = useState<CategoriaTurno | null>(params.categoria ?? 'diaria');
   const [selectedTurnoId, setSelectedTurnoId] = useState<number | null>(null);
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));
 
@@ -32,11 +31,6 @@ export const TurnosScreen: React.FC = () => {
     selectedTurnoId,
     fecha
   );
-
-  const handleSeleccionarCategoria = (categoria: CategoriaTurno) => {
-    setFilterCategoria(categoria);
-    setSelectedTurnoId(null);
-  };
 
   const handleSeleccionarTurno = async (turnoId: number) => {
     setSelectedTurnoId(turnoId);
@@ -109,24 +103,13 @@ export const TurnosScreen: React.FC = () => {
     );
   }
 
-  if (!filterCategoria) {
-    return (
-      <View style={styles.container}>
-        <AppHeader />
-        <CategoriaSelector
-          onSelectCategoria={handleSeleccionarCategoria}
-          showAddButton={!!isAdmin}
-          onAddPress={() => {
-            const parent = navigation.getParent();
-            const nav = parent || navigation;
-            nav.navigate('CreateTurno', {
-              onSuccess: reloadData,
-            });
-          }}
-        />
-      </View>
-    );
-  }
+  const handleBack = () => {
+    if ((navigation as any).openDrawer) {
+      (navigation as any).openDrawer();
+    } else {
+      navigation.navigate('MainDrawer', { screen: 'DrawerMenu' } as any);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -134,11 +117,11 @@ export const TurnosScreen: React.FC = () => {
       
       <SubHeaderBar
         title={filterCategoria === 'diaria' ? 'La Diaria' : 'La Tica'}
-        onBack={() => {
-          setFilterCategoria(null);
-          setSelectedTurnoId(null);
-        }}
+        onBack={handleBack}
+        showBackButton={false}
         showAddButton={!!isAdmin}
+        rightLabel={filterCategoria === 'diaria' ? 'La Tica' : 'La Diaria'}
+        onRightPress={() => setFilterCategoria(filterCategoria === 'diaria' ? 'tica' : 'diaria')}
         onAddPress={() => {
           const parent = navigation.getParent();
           const nav = parent || navigation;

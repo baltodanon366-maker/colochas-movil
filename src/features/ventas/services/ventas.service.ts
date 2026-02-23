@@ -31,6 +31,10 @@ class VentasService {
     }
     return venta as Venta;
   }
+
+  async delete(id: number): Promise<void> {
+    await apiService.delete(API_ENDPOINTS.VENTAS.BY_ID(id));
+  }
 }
 
 export const ventasService = new VentasService();

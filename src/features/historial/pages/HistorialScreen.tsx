@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Loading } from '../../../components/Loading';
@@ -30,8 +30,11 @@ type HistorialView = 'selector' | 'reporte' | 'reporteCierre';
 export const HistorialScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const route = useRoute();
+  const params = (route.params || {}) as { initialView?: 'reporte' | 'reporteCierre' };
+  const initialView = params.initialView ?? 'selector';
 
-  const [view, setView] = useState<HistorialView>('selector');
+  const [view, setView] = useState<HistorialView>(initialView);
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('Mi Historial');
@@ -160,6 +163,7 @@ export const HistorialScreen: React.FC = () => {
       <SubHeaderBar
         title="Reporte"
         onBack={() => setView('selector')}
+        showBackButton={false}
         showAddButton={false}
       />
 

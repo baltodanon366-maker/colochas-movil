@@ -1,27 +1,27 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useAuth } from '../hooks/useAuth';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { DrawerMenuScreen } from '../components/DrawerMenuScreen';
 
 // Auth Pages
 import { LoginScreen } from '../features/auth/pages/LoginScreen';
 
-// Main Pages
-import { DashboardScreen } from '../features/dashboard/pages/DashboardScreen';
+// Main Pages (Drawer)
 import { VentasScreen } from '../features/ventas/pages/VentasScreen';
 import { RestriccionesScreen } from '../features/restricciones/pages/RestriccionesScreen';
 import { TurnosScreen } from '../features/cierres/pages/TurnosScreen';
-import { PerfilScreen } from '../features/perfil/pages/PerfilScreen';
 import { HistorialScreen } from '../features/historial/pages/HistorialScreen';
+import { PerfilScreen } from '../features/perfil/pages/PerfilScreen';
 import { AnalisisNumerosScreen } from '../features/historial/pages/AnalisisNumerosScreen';
 import { UserManagementScreen } from '../features/users/pages/UserManagementScreen';
 import { VentaDetalleScreen } from '../features/ventas/pages/VentaDetalleScreen';
 
-// New Form Screens
+// Form Screens
 import { NuevaVentaScreen } from '../features/ventas/pages/NuevaVentaScreen';
 import { SeleccionarTurnoScreen } from '../features/ventas/pages/SeleccionarTurnoScreen';
 import { CreateUserScreen } from '../features/users/pages/CreateUserScreen';
@@ -34,8 +34,8 @@ import { BoucherPreviewScreen } from '../features/ventas/pages/BoucherPreviewScr
 import { NumeroDetalleScreen } from '../features/historial/pages/NumeroDetalleScreen';
 
 export type RootStackParamList = {
+  MainDrawer: undefined;
   Login: undefined;
-  MainTabs: undefined;
   Perfil: undefined;
   UserManagement: undefined;
   VentaDetalle: { ventaId: number };
@@ -52,86 +52,137 @@ export type RootStackParamList = {
   NumeroDetalle: { numero: any };
 };
 
-export type MainTabParamList = {
-  Dashboard: undefined;
-  Ventas: { turnoId?: number };
-  Restricciones: undefined;
-  Cierres: undefined;
-  Historial: undefined;
+export type MainDrawerParamList = {
+  Ventas: { categoria?: 'diaria' | 'tica' };
+  Restricciones: { categoria?: 'diaria' | 'tica' };
+  Turnos: { categoria?: 'diaria' | 'tica' };
+  Historial: { initialView?: 'reporte' };
+  CierreDeTurno: { initialView?: 'reporteCierre' };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator<MainTabParamList>();
+const Drawer = createDrawerNavigator<MainDrawerParamList>();
 
-const MainTabs = () => {
+const MainDrawer = () => {
   return (
-    <Tab.Navigator
+    <Drawer.Navigator
       initialRouteName="Ventas"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.text.tertiary,
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: Colors.border.light,
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
-          backgroundColor: Colors.background.secondary,
+        drawerType: 'front',
+        drawerStyle: {
+          backgroundColor: Colors.primaryDark,
+          width: 280,
         },
+        drawerActiveTintColor: Colors.secondary,
+        drawerInactiveTintColor: Colors.text.inverse,
+        drawerLabelStyle: {
+          fontSize: 16,
+          fontWeight: '600',
+        },
+        drawerItemStyle: {
+          marginVertical: 4,
+          marginHorizontal: 12,
+          borderRadius: 8,
+        },
+        drawerActiveBackgroundColor: Colors.primary,
       }}
     >
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{
-          tabBarLabel: 'Inicio',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
+      <Drawer.Screen
         name="Ventas"
         component={VentasScreen}
+        initialParams={{ categoria: 'diaria' }}
         options={{
-          tabBarLabel: 'Ventas',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt" size={size} color={color} />
+          drawerLabel: 'Ventas',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="receipt-outline" size={size} color={color} />
           ),
         }}
       />
-      <Tab.Screen
+      <Drawer.Screen
         name="Restricciones"
         component={RestriccionesScreen}
+        initialParams={{ categoria: 'diaria' }}
         options={{
-          tabBarLabel: 'Restricciones',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="ban" size={size} color={color} />
+          drawerLabel: 'Restricciones',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="ban-outline" size={size} color={color} />
           ),
         }}
       />
-      <Tab.Screen
-        name="Cierres"
+      <Drawer.Screen
+        name="Turnos"
         component={TurnosScreen}
+        initialParams={{ categoria: 'diaria' }}
         options={{
-          tabBarLabel: 'Turnos',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time" size={size} color={color} />
+          drawerLabel: 'Turnos',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="time-outline" size={size} color={color} />
           ),
         }}
       />
-      <Tab.Screen
+      <Drawer.Screen
         name="Historial"
         component={HistorialScreen}
+        initialParams={{ initialView: 'reporte' }}
         options={{
-          tabBarLabel: 'Reporte',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time" size={size} color={color} />
+          drawerLabel: 'Historial',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="document-text-outline" size={size} color={color} />
           ),
         }}
       />
-    </Tab.Navigator>
+      <Drawer.Screen
+        name="CierreDeTurno"
+        component={HistorialScreen}
+        initialParams={{ initialView: 'reporteCierre' }}
+        options={{
+          drawerLabel: 'Cierre de turno',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="close-circle-outline" size={size} color={color} />
+          ),
+        }}
+      />
+    </Drawer.Navigator>
+  );
+};
+
+/** En web el Drawer usa Reanimated que falla; usamos un Stack con pantalla de menú. */
+const WebStack = createNativeStackNavigator<MainDrawerParamList & { DrawerMenu: undefined }>();
+
+const MainWeb = () => {
+  return (
+    <WebStack.Navigator
+      initialRouteName="Ventas"
+      screenOptions={{ headerShown: false }}
+    >
+      <WebStack.Screen
+        name="Ventas"
+        component={VentasScreen}
+        initialParams={{ categoria: 'diaria' }}
+      />
+      <WebStack.Screen
+        name="Restricciones"
+        component={RestriccionesScreen}
+        initialParams={{ categoria: 'diaria' }}
+      />
+      <WebStack.Screen
+        name="Turnos"
+        component={TurnosScreen}
+        initialParams={{ categoria: 'diaria' }}
+      />
+      <WebStack.Screen
+        name="Historial"
+        component={HistorialScreen}
+        initialParams={{ initialView: 'reporte' }}
+      />
+      <WebStack.Screen
+        name="CierreDeTurno"
+        component={HistorialScreen}
+        initialParams={{ initialView: 'reporteCierre' }}
+      />
+      <WebStack.Screen name="DrawerMenu" component={DrawerMenuScreen} />
+    </WebStack.Navigator>
   );
 };
 
@@ -155,74 +206,77 @@ export const AppNavigator: React.FC = () => {
       >
         {isAuthenticated ? (
           <>
-            <Stack.Screen name="MainTabs" component={MainTabs} />
-            <Stack.Screen 
-              name="Perfil" 
+            <Stack.Screen
+              name="MainDrawer"
+              component={Platform.OS === 'web' ? MainWeb : MainDrawer}
+            />
+            <Stack.Screen
+              name="Perfil"
               component={PerfilScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="UserManagement" 
+            <Stack.Screen
+              name="UserManagement"
               component={UserManagementScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="VentaDetalle" 
+            <Stack.Screen
+              name="VentaDetalle"
               component={VentaDetalleScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="AnalisisNumeros" 
+            <Stack.Screen
+              name="AnalisisNumeros"
               component={AnalisisNumerosScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="NuevaVenta" 
+            <Stack.Screen
+              name="NuevaVenta"
               component={NuevaVentaScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="SeleccionarTurno" 
+            <Stack.Screen
+              name="SeleccionarTurno"
               component={SeleccionarTurnoScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="CreateUser" 
+            <Stack.Screen
+              name="CreateUser"
               component={CreateUserScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="EditUser" 
+            <Stack.Screen
+              name="EditUser"
               component={EditUserScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="CreateTurno" 
+            <Stack.Screen
+              name="CreateTurno"
               component={CreateTurnoScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="EditTurno" 
+            <Stack.Screen
+              name="EditTurno"
               component={EditTurnoScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="CerrarTurno" 
+            <Stack.Screen
+              name="CerrarTurno"
               component={CerrarTurnoScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="CreateRestriccion" 
+            <Stack.Screen
+              name="CreateRestriccion"
               component={CreateRestriccionScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="BoucherPreview" 
+            <Stack.Screen
+              name="BoucherPreview"
               component={BoucherPreviewScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="NumeroDetalle" 
+            <Stack.Screen
+              name="NumeroDetalle"
               component={NumeroDetalleScreen}
               options={{ headerShown: false }}
             />

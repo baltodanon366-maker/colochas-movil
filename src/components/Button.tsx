@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Colors } from '../constants/colors';
 
 interface ButtonProps {
@@ -59,14 +59,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     minHeight: 50,
-    shadowColor: Colors.shadow.color,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: Colors.shadow.opacity,
-    shadowRadius: 4,
-    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 2px 4px rgba(0,0,0,0.1)' as any }
+      : {
+          shadowColor: Colors.shadow.color,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: Colors.shadow.opacity,
+          shadowRadius: 4,
+          elevation: 3,
+        }),
   },
   primary: {
     backgroundColor: Colors.secondary, // Dorado estándar

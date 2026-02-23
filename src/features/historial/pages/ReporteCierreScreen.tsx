@@ -137,6 +137,7 @@ export const ReporteCierreScreen: React.FC<ReporteCierreScreenProps> = ({ onBack
       <SubHeaderBar
         title="Reporte de Cierre"
         onBack={onBack}
+        showBackButton={false}
         showAddButton={false}
       />
 

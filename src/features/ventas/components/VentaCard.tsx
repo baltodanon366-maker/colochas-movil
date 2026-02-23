@@ -1,18 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
 import { Colors } from '../../../constants/colors';
 import { Venta } from '../../../types';
-import { format } from 'date-fns';
 import { formatDateString } from '../../../utils/dateUtils';
 
 interface VentaCardProps {
   venta: Venta;
   onPress: () => void;
+  onDelete?: (venta: Venta) => void;
 }
 
-export const VentaCard: React.FC<VentaCardProps> = ({ venta, onPress }) => {
+export const VentaCard: React.FC<VentaCardProps> = ({ venta, onPress, onDelete }) => {
+  const handleDeletePress = () => {
+    if (!onDelete) return;
+    Alert.alert(
+      'Eliminar venta',
+      `¿Eliminar la venta ${venta.numeroBoucher}? Esta acción no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Eliminar', style: 'destructive', onPress: () => onDelete(venta) },
+      ]
+    );
+  };
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <Card style={styles.ventaCard}>
@@ -23,6 +35,15 @@ export const VentaCard: React.FC<VentaCardProps> = ({ venta, onPress }) => {
           </View>
           <View style={styles.ventaHeaderRight}>
             <Text style={styles.total}>${Number(venta.total).toFixed(2)}</Text>
+            {onDelete && (
+              <TouchableOpacity
+                onPress={handleDeletePress}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.deleteButton}
+              >
+                <Ionicons name="trash-outline" size={22} color={Colors.error} />
+              </TouchableOpacity>
+            )}
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </View>
         </View>
@@ -61,6 +82,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  deleteButton: {
+    padding: 4,
   },
   boucher: {
     fontSize: 18,

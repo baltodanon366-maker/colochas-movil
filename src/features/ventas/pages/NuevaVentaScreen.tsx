@@ -86,6 +86,7 @@ export const NuevaVentaScreen: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [errorMontoRestriccion, setErrorMontoRestriccion] = useState<string | null>(null);
   const turnoAnteriorRef = useRef<Turno | null>(null);
+  const creatingRef = useRef(false);
 
   useEffect(() => {
     if (turno) {
@@ -234,11 +235,11 @@ export const NuevaVentaScreen: React.FC = () => {
   };
 
   const handleCreate = async () => {
+    if (creatingRef.current) return;
     if (!turno) {
       Alert.alert('Error', 'No hay un turno activo');
       return;
     }
-
     if (detalles.length === 0) {
       Alert.alert('Error', 'Agrega al menos un número');
       return;
@@ -247,6 +248,7 @@ export const NuevaVentaScreen: React.FC = () => {
     const puedeVender = await verificarRestricciones();
     if (!puedeVender) return;
 
+    creatingRef.current = true;
     setCreating(true);
     try {
       const venta = await ventasService.create({
@@ -255,11 +257,11 @@ export const NuevaVentaScreen: React.FC = () => {
         detalles,
       });
       onSuccess?.();
-      // Navegar a la pantalla de preview del boucher
-      navigation.navigate('BoucherPreview', { venta });
+      navigation.replace('BoucherPreview', { venta });
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo crear la venta');
     } finally {
+      creatingRef.current = false;
       setCreating(false);
     }
   };

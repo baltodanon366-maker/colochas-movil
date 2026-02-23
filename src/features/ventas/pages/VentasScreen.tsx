@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState } from 'react';
+import { View, ScrollView, StyleSheet, Alert } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
@@ -9,43 +9,27 @@ import { EmptyState } from '../../../components/EmptyState';
 import { AppHeader } from '../../../components/AppHeader';
 import { SubHeaderBar } from '../../../components/SubHeaderBar';
 import { Colors } from '../../../constants/colors';
-import {
-  CategoriaSelector,
-  TurnoInfoCard,
-  VentaCard,
-} from '../components';
+import { TurnoInfoCard, VentaCard } from '../components';
 import { useVentas } from '../hooks/useVentas';
 import { ventasService } from '../services/ventas.service';
 import { CategoriaTurno, Venta } from '../../../types';
-import { RootStackParamList } from '../../../navigation/AppNavigator';
+import { RootStackParamList, MainDrawerParamList } from '../../../navigation/AppNavigator';
 
-type VentasView = 'categoria' | 'ventas';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const VentasScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [view, setView] = useState<VentasView>('categoria');
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaTurno | null>(null);
+  const route = useRoute();
+  const params = (route.params || {}) as MainDrawerParamList['Ventas'];
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaTurno | null>(params.categoria ?? 'diaria');
 
   const { turnoActual, ventas, loading, reloadVentas } = useVentas(categoriaSeleccionada);
 
-  // Cambiar a vista de ventas cuando se selecciona una categoría
-  useEffect(() => {
-    if (categoriaSeleccionada) {
-      setView('ventas');
-    }
-  }, [categoriaSeleccionada]);
-
-  const handleSeleccionarCategoria = async (categoria: CategoriaTurno) => {
-    setCategoriaSeleccionada(categoria);
-  };
-
   const handleNavigateToNuevaVenta = () => {
     if (!turnoActual) return;
-    
     const parent = navigation.getParent();
     const nav = parent || navigation;
-    nav.navigate('NuevaVenta', {
+    (nav as any).navigate('NuevaVenta', {
       turnoId: turnoActual.id,
       categoria: categoriaSeleccionada,
       onSuccess: reloadVentas,
@@ -61,22 +45,23 @@ export const VentasScreen: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    setView('categoria');
-    setCategoriaSeleccionada(null);
+  const handleDeleteVenta = async (venta: Venta) => {
+    try {
+      await ventasService.delete(venta.id);
+      reloadVentas();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo eliminar la venta');
+    }
   };
 
-  // Vista de selección de categoría
-  if (view === 'categoria') {
-    return (
-      <View style={styles.container}>
-        <AppHeader />
-        <CategoriaSelector onSelectCategoria={handleSeleccionarCategoria} />
-      </View>
-    );
-  }
+  const handleBack = () => {
+    if ((navigation as any).openDrawer) {
+      (navigation as any).openDrawer();
+    } else {
+      navigation.navigate('MainDrawer', { screen: 'DrawerMenu' } as any);
+    }
+  };
 
-  // Vista de ventas - Mostrar siempre el header y subheader para evitar parpadeo
   return (
     <View style={styles.container}>
       <AppHeader />
@@ -84,8 +69,10 @@ export const VentasScreen: React.FC = () => {
       <SubHeaderBar
         title={categoriaSeleccionada === 'diaria' ? 'La Diaria' : 'La Tica'}
         onBack={handleBack}
-        showAddButton={!!turnoActual && !loading}
-        onAddPress={handleNavigateToNuevaVenta}
+        showBackButton={false}
+        showAddButton={false}
+        rightLabel={categoriaSeleccionada === 'diaria' ? 'La Tica' : 'La Diaria'}
+        onRightPress={() => setCategoriaSeleccionada(categoriaSeleccionada === 'diaria' ? 'tica' : 'diaria')}
       />
 
       <ScrollView style={styles.content}>
@@ -118,6 +105,7 @@ export const VentasScreen: React.FC = () => {
               key={venta.id}
               venta={venta}
               onPress={() => handleVentaPress(venta.id)}
+              onDelete={handleDeleteVenta}
             />
           ))
         )}
