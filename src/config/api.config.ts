@@ -2,14 +2,11 @@
 // export const API_CONEXION = "http://localhost:3000/api";
 export const API_CONEXION = "https://colochas-api.onrender.com/api";
 
-/** URL raíz del servidor (para ping de despertar cuando la API está en Render) */
-export const API_ROOT_URL = API_CONEXION.replace(/\/api\/?$/, '');
-
 // Versión de la API
 export const API_VERSION = "v1";
 
-// Timeout para las peticiones (mayor para Render cold start)
-export const API_TIMEOUT = 25000;
+// Timeout para las peticiones
+export const API_TIMEOUT = 10000;
 
 // Construir URL completa
 const buildUrl = (endpoint: string): string => {
@@ -21,7 +18,6 @@ export const API_ENDPOINTS = {
   AUTH: {
     SIGNUP: buildUrl('/auth/signUp'),
     LOGIN: buildUrl('/auth/login'),
-    REFRESH: buildUrl('/auth/refresh'),
     UPDATE_USER: (id: string) => buildUrl(`/auth/${id}`),
     GET_ALL_USERS: buildUrl('/auth'),
   },

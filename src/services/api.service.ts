@@ -35,22 +35,9 @@ export interface ApiError {
   message: string;
 }
 
-const RETRY_DELAY_MS = 2000;
-const MAX_RETRIES = 2;
-
-function isRetryableNetworkError(error: any): boolean {
-  return (
-    error.code === 'ECONNABORTED' ||
-    error.code === 'ERR_NETWORK' ||
-    error.message === 'Network Error'
-  );
-}
-
 class ApiService {
   private client: AxiosInstance;
   private token: string | null = null;
-  private onUnauthorized: (() => void) | null = null;
-  private refreshTokenProvider: (() => Promise<{ access_token: string } | null>) | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -78,39 +65,12 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError<ApiError>) => {
-        const config = error.config as any;
-
-        // Reintento por timeout o red (útil cuando Render se despierta)
-        const retryCount = (config?.__retryCount ?? 0);
-        if (isRetryableNetworkError(error) && config && retryCount < MAX_RETRIES) {
-          config.__retryCount = retryCount + 1;
-          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
-          return this.client.request(config);
-        }
-
         if (error.response?.status === 401) {
-          const refreshed = await this.refreshTokenProvider?.().catch(() => null);
-          if (refreshed?.access_token) {
-            this.token = refreshed.access_token;
-            config.headers = config.headers || {};
-            config.headers.Authorization = `Bearer ${refreshed.access_token}`;
-            return this.client.request(config);
-          }
           await this.clearAuth();
-          this.onUnauthorized?.();
         }
-
         return Promise.reject(error);
       }
     );
-  }
-
-  setOnUnauthorized(callback: () => void) {
-    this.onUnauthorized = callback;
-  }
-
-  setRefreshTokenProvider(provider: () => Promise<{ access_token: string } | null>) {
-    this.refreshTokenProvider = provider;
   }
 
   async setToken(token: string) {
@@ -122,7 +82,6 @@ class ApiService {
     this.token = null;
     await AsyncStorage.removeItem('auth_token');
     await AsyncStorage.removeItem('user_data');
-    await AsyncStorage.removeItem('auth_refresh_token');
   }
 
   async getToken(): Promise<string | null> {
