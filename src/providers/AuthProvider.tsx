@@ -1,7 +1,6 @@
 import React, { ReactNode, useState, useEffect, createContext, useContext } from 'react';
 import { authService, User } from '../features/auth/services/auth.service';
 import { apiService } from '../services/api.service';
-import { API_ROOT_URL } from '../config/api.config';
 
 interface AuthContextType {
   user: User | null;
@@ -24,8 +23,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Ping a la raíz de la API para despertarla si está dormida (Render)
-    fetch(API_ROOT_URL, { method: 'GET' }).catch(() => {});
+    // Ping desactivado temporalmente: en algunos Android podía provocar cierre al abrir la app.
+    // Para despertar la API en Render, usar UptimeRobot u otro cron contra la URL raíz.
+    // fetch(API_ROOT_URL, { method: 'GET' }).catch(() => {});
     checkAuthStatus();
   }, []);
 
